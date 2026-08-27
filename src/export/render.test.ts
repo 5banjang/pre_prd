@@ -1,0 +1,203 @@
+import { describe, it, expect } from 'vitest';
+import {
+  COMPACT_LIMIT,
+  forbiddenList,
+  orderByDependency,
+  permissionCandidates,
+  renderCompact,
+  renderFullPRD,
+  renderSetupGuide,
+} from './render.js';
+import { createEmptyState, type PRDState, type Requirement } from '../types/prd.js';
+
+const fr = (id: string, over: Partial<Requirement> = {}): Requirement => ({
+  id,
+  title: `기능 ${id}`,
+  description: '설명',
+  acceptanceCriteria: ['전송하면 3초 이내에 표시된다', '실패한 경우 오류가 노출된다'],
+  priority: 'Must',
+  dependsOn: [],
+  section: 'FR',
+  ...over,
+});
+
+function filled(): PRDState {
+  const s = createEmptyState('러닝 크루 앱');
+  for (const id of Object.keys(s.sections) as (keyof typeof s.sections)[]) {
+    s.sections[id].status = 'confirmed';
+    s.sections[id].content = `${id} 본문입니다.`;
+  }
+  s.sections.S3.content = '- 회원가입·인증\n- 결제\n- 서버 DB';
+  s.sections.S8.content = 'Suggestion: React + Vite + TypeScript. 테스트는 Vitest.';
+  s.requirements = [
+    fr('FR-001'),
+    fr('FR-002', { dependsOn: ['FR-001'] }),
+    fr('FR-003', { priority: 'Should' }),
+    fr('NFR-001', { section: 'NFR', title: '보안' }),
+  ];
+  s.openQuestions = ['배포처 확정', '가격 확인'];
+  s.unverifiedTerms = ['Gemini 3.7 Flash 단가'];
+  s.costModel = [{ item: 'LLM 호출', unit: '세션당', estimatedCost: 0.25, verified: false, note: '실측' }];
+  s.turn = 12;
+  return s;
+}
+
+describe('forbiddenList — S3를 구현 금지 목록으로', () => {
+  it('불릿 목록을 뽑는다', () => {
+    expect(forbiddenList(filled())).toEqual(['회원가입·인증', '결제', '서버 DB']);
+  });
+
+  it('표 형식도 첫 열을 뽑는다', () => {
+    const s = filled();
+    s.sections.S3.content = '| 항목 | 사유 |\n|---|---|\n| 음성 입력 | 부가 기능 |\n| 다국어 | v2 |';
+    expect(forbiddenList(s)).toEqual(['음성 입력', '다국어']);
+  });
+
+  it('비어 있으면 빈 배열', () => {
+    const s = createEmptyState();
+    expect(forbiddenList(s)).toEqual([]);
+  });
+});
+
+describe('renderFullPRD — FR-008', () => {
+  it('LLM 없이 상태에서 결정적으로 조립한다 (AC1)', () => {
+    const s = filled();
+    expect(renderFullPRD(s)).toBe(renderFullPRD(s));
+  });
+
+  it('요구사항을 AC와 함께 렌더링한다', () => {
+    const md = renderFullPRD(filled());
+    expect(md).toContain('### FR-001: 기능 FR-001');
+    expect(md).toContain('- [ ] 전송하면 3초 이내에 표시된다');
+    expect(md).toContain('- **의존성:** FR-001');
+  });
+
+  it('Handoff Note가 말미에 자동 삽입된다 (AC3)', () => {
+    const md = renderFullPRD(filled());
+    expect(md).toContain('## Handoff Note (개발 AI에게)');
+    expect(md.trimEnd().endsWith('결정적으로 조립했다.*')).toBe(true);
+  });
+
+  it('Handoff Note에 구현 금지 목록이 들어간다', () => {
+    const md = renderFullPRD(filled());
+    const note = md.slice(md.indexOf('## Handoff Note'));
+    expect(note).toContain('- 회원가입·인증');
+    expect(note).toContain('- 결제');
+  });
+
+  it('원가 표와 합계를 렌더링한다', () => {
+    const md = renderFullPRD(filled());
+    expect(md).toContain('| LLM 호출 | 세션당 | $0.25 | [미검증] | 실측 |');
+    expect(md).toContain('**합계: $0.25**');
+  });
+
+  it('빈 섹션은 건너뛴다', () => {
+    const s = createEmptyState('빈 문서');
+    expect(renderFullPRD(s)).not.toContain('## S4.');
+  });
+});
+
+describe('renderCompact — FR-009', () => {
+  it('S3가 "구현 금지" 목록으로 명시된다 (AC1)', () => {
+    const c = renderCompact(filled());
+    expect(c).toContain('## 구현 금지 (Out of Scope)');
+    expect(c).toContain('- 회원가입·인증');
+  });
+
+  it('4,000자 이내면 전체 FR을 담는다', () => {
+    const c = renderCompact(filled());
+    expect(c.length).toBeLessThanOrEqual(COMPACT_LIMIT);
+    expect(c).toContain('FR-003');
+    expect(c).not.toContain('Must만');
+  });
+
+  it('4,000자를 초과하면 Must만 남긴다 (AC2)', () => {
+    const s = filled();
+    s.requirements = [
+      ...Array.from({ length: 30 }, (_, i) =>
+        fr(`FR-${String(i + 1).padStart(3, '0')}`, { description: '설명 '.repeat(40) })),
+      fr('FR-900', { priority: 'Could', title: '미룰 것', description: '설명 '.repeat(40) }),
+    ];
+    const c = renderCompact(s);
+    expect(c).toContain('Must만');
+    expect(c).not.toContain('FR-900');
+  });
+
+  it('전체본보다 짧다', () => {
+    const s = filled();
+    expect(renderCompact(s).length).toBeLessThan(renderFullPRD(s).length);
+  });
+});
+
+describe('orderByDependency — FR-013 AC2', () => {
+  it('의존성을 위반하지 않는 순서로 정렬한다', () => {
+    const reqs = [
+      fr('FR-003', { dependsOn: ['FR-002'] }),
+      fr('FR-002', { dependsOn: ['FR-001'] }),
+      fr('FR-001'),
+    ];
+    expect(orderByDependency(reqs).map((r) => r.id)).toEqual(['FR-001', 'FR-002', 'FR-003']);
+  });
+
+  it('목록 밖의 의존성은 무시한다', () => {
+    const reqs = [fr('FR-001', { dependsOn: ['FR-999'] })];
+    expect(orderByDependency(reqs).map((r) => r.id)).toEqual(['FR-001']);
+  });
+
+  it('순환이 있어도 멈추지 않고 전부 돌려준다', () => {
+    const reqs = [
+      fr('FR-001', { dependsOn: ['FR-002'] }),
+      fr('FR-002', { dependsOn: ['FR-001'] }),
+    ];
+    expect(orderByDependency(reqs)).toHaveLength(2);
+  });
+});
+
+describe('permissionCandidates', () => {
+  it('S8에서 스택을 읽어 후보를 만든다', () => {
+    const p = permissionCandidates('Suggestion: React + Vite + TypeScript, 테스트는 Vitest');
+    expect(p).toContain('Bash(npm run:*)');
+    expect(p).toContain('Bash(npx vitest:*)');
+  });
+
+  it('파이썬 스택을 알아본다', () => {
+    const p = permissionCandidates('FastAPI + pytest');
+    expect(p).toContain('Bash(pytest:*)');
+    expect(p).not.toContain('Bash(npx vitest:*)');
+  });
+
+  it('스택을 몰라도 기본값은 준다', () => {
+    expect(permissionCandidates('')).toContain('Read');
+  });
+});
+
+describe('renderSetupGuide — FR-013', () => {
+  it('CLAUDE.md 초안에 구현 금지 목록이 들어간다 (AC1)', () => {
+    const g = renderSetupGuide(filled());
+    expect(g).toContain('## 1. `CLAUDE.md` 초안');
+    expect(g).toContain('## 구현 금지 (Out of Scope)');
+    expect(g).toContain('- 회원가입·인증');
+  });
+
+  it('개발 순서가 의존성 순이다 (AC2)', () => {
+    const g = renderSetupGuide(filled());
+    expect(g.indexOf('FR-001')).toBeLessThan(g.indexOf('FR-002'));
+  });
+
+  it('권한 allowlist가 유효한 JSON이다', () => {
+    const g = renderSetupGuide(filled());
+    const json = g.slice(g.indexOf('```json') + 7, g.lastIndexOf('```'));
+    expect(() => JSON.parse(json.trim())).not.toThrow();
+  });
+
+  it('미해결 질문과 [미검증] 항목을 체크리스트로 낸다', () => {
+    const g = renderSetupGuide(filled());
+    expect(g).toContain('- [ ] 배포처 확정');
+    expect(g).toContain('- [ ] Gemini 3.7 Flash 단가');
+  });
+
+  it('결정적이다 (AC3)', () => {
+    const s = filled();
+    expect(renderSetupGuide(s)).toBe(renderSetupGuide(s));
+  });
+});
