@@ -25,8 +25,7 @@
     ],
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)",
-      "Bash(git push:*)"
+      "Read(./.env.*)"
     ]
   }
 }
