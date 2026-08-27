@@ -5,6 +5,7 @@
 
 import { ENGINE_MODEL } from '../config.js';
 import { SECTION_IDS, type PRDState, type Requirement, type SectionId } from '../types/prd.js';
+import type { ValidationIssue } from '../validator/validate.js';
 
 /** 압축본 상한 — FR-009 AC2. 초과 시 Must만 남긴다. */
 export const COMPACT_LIMIT = 4000;
@@ -103,6 +104,30 @@ export function renderFullPRD(state: PRDState): string {
 
   parts.push(renderHandoffNote(state));
   return parts.join('\n');
+}
+
+/**
+ * 미완성 상태로 내보낼 때 문서 맨 위에 붙는 경고 배너.
+ * 검증기가 차단한 항목을 그대로 나열한다 — 배너를 붙였다고 검증 결과가 통과로 바뀌지는 않는다.
+ */
+export function renderDraftBanner(issues: readonly ValidationIssue[]): string {
+  const blocking = issues.filter((i) => i.severity === 'block');
+  if (blocking.length === 0) return '';
+  return [
+    '> ⚠ **초안 — 검증 미통과 상태로 내보냄**',
+    '>',
+    `> 아래 ${blocking.length}개 항목이 완성 기준을 통과하지 못했다. 개발 착수 전에 반드시 보완할 것.`,
+    '>',
+    ...blocking.map((i) => `> - **${i.sectionId ?? ''}** ${i.message} \`${i.code}\``),
+    '',
+    '---',
+    '',
+  ].join('\n');
+}
+
+/** 검증 통과 여부와 무관하게 항상 내보낼 수 있는 초안본 — 맨 위에 미해결 이슈 배너를 붙인다. */
+export function renderDraft(state: PRDState, issues: readonly ValidationIssue[]): string {
+  return renderDraftBanner(issues) + renderFullPRD(state);
 }
 
 /** 문서 말미에 자동 삽입된다 — FR-008 AC3. 스펙 §14를 이 프로젝트에 맞게 조립한다. */

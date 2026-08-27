@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import type { PRDState } from '../types/prd.js';
-import { renderCompact, renderFullPRD, renderSetupGuide } from '../export/render.js';
+import { renderCompact, renderDraft, renderFullPRD, renderSetupGuide } from '../export/render.js';
+import type { ValidationIssue } from '../validator/validate.js';
 
 interface Props {
   state: PRDState;
   canExport: boolean;
+  issues: readonly ValidationIssue[];
 }
 
 type Kind = 'full' | 'compact' | 'setup';
@@ -33,12 +35,26 @@ function download(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function ExportBar({ state, canExport }: Props) {
-  const [copied, setCopied] = useState<Kind | null>(null);
-  const [preview, setPreview] = useState<Kind | null>(null);
+type PreviewKind = Kind | 'draft';
 
-  async function copy(kind: Kind) {
-    const text = DOCS[kind].render(state);
+export function ExportBar({ state, canExport, issues }: Props) {
+  const [copied, setCopied] = useState<PreviewKind | null>(null);
+  const [preview, setPreview] = useState<PreviewKind | null>(null);
+
+  const draftText = () => renderDraft(state, issues);
+  const draftLabel = '전체 PRD (초안)';
+  const draftFile = () => `${slug(state.projectName)}-PRD-draft.md`;
+
+  function textFor(kind: PreviewKind): string {
+    return kind === 'draft' ? draftText() : DOCS[kind].render(state);
+  }
+
+  function labelFor(kind: PreviewKind): string {
+    return kind === 'draft' ? draftLabel : DOCS[kind].label;
+  }
+
+  async function copy(kind: PreviewKind) {
+    const text = textFor(kind);
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -74,15 +90,33 @@ export function ExportBar({ state, canExport }: Props) {
         </div>
       ))}
 
+      {!canExport && (
+        <div className="export-draft">
+          <div className="export-item">
+            <span className="export-label">{draftLabel}</span>
+            <button onClick={() => copy('draft')}>
+              {copied === 'draft' ? '✓ 복사됨' : '복사'}
+            </button>
+            <button className="ghost" onClick={() => download(draftFile(), draftText())}>
+              ⭳ .md
+            </button>
+            <button className="ghost" onClick={() => setPreview('draft')}>
+              보기
+            </button>
+          </div>
+          <p className="hint warn">차단 이슈를 해결하지 않은 상태 그대로, 문서 맨 위에 미해결 목록을 붙여서 내보낸다.</p>
+        </div>
+      )}
+
       {preview && (
         <div className="modal" onClick={() => setPreview(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <strong>{DOCS[preview].label}</strong>
-              <span className="dim">{DOCS[preview].render(state).length.toLocaleString()}자</span>
+              <strong>{labelFor(preview)}</strong>
+              <span className="dim">{textFor(preview).length.toLocaleString()}자</span>
               <button className="ghost" onClick={() => setPreview(null)}>닫기</button>
             </div>
-            <textarea readOnly value={DOCS[preview].render(state)} onFocus={(e) => e.currentTarget.select()} />
+            <textarea readOnly value={textFor(preview)} onFocus={(e) => e.currentTarget.select()} />
             <p className="hint">전체 선택은 ⌘/Ctrl + A 입니다.</p>
           </div>
         </div>

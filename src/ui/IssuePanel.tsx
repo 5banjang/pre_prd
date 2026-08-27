@@ -41,7 +41,7 @@ export function IssuePanel({ issues, canExport, state }: Props) {
         ))}
       </ul>
 
-      <ExportBar state={state} canExport={canExport} />
+      <ExportBar state={state} canExport={canExport} issues={issues} />
     </section>
   );
 }

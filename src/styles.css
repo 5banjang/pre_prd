@@ -236,6 +236,7 @@ body {
 .export-item { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .export-label { flex: 1; font-size: 12px; color: var(--dim); }
 .export-item button { padding: 5px 10px; font-size: 12px; }
+.export-draft { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--draft); }
 
 .modal {
   position: fixed; inset: 0; z-index: 50;
