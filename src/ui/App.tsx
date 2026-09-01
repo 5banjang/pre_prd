@@ -5,17 +5,17 @@
 //   ├──────────────────────┬───────────────────────┤
 //   │ 대화 영역             │ PRD 미리보기           │
 //   │                      ├───────────────────────┤
-//   │ [입력    ] [전송]     │ ⚠ 내보내기 차단 (4)    │
+//   │ [입력    ] [전송]     │ 완성도 68% · 미완성 4  │
 //   └──────────────────────┴───────────────────────┘
 
-import { useEffect, useMemo, useReducer, useRef } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { createEmptyState, type PRDState, type SectionId } from '../types/prd.js';
 import { runTurn } from '../engine/callEngine.js';
 import type { EngineError } from '../engine/geminiAdapter.js';
 import type { RejectedPatch } from '../engine/applyPatches.js';
 import { editSection, unlockSection } from '../engine/applyPatches.js';
 import type { AnswerMap, EngineQuestion } from '../engine/question.js';
-import { validate } from '../validator/validate.js';
+import { completeness, validate } from '../validator/validate.js';
 import { toQuestions } from '../engine/geminiAdapter.js';
 import {
   clearApiKey, clearSession, idbStore, loadSession, saveApiKey, saveSessionMeta, saveState,
@@ -23,8 +23,9 @@ import {
 } from '../storage/persist.js';
 import { Header } from './Header.js';
 import { ChatPanel } from './ChatPanel.js';
-import { PreviewPanel } from './PreviewPanel.js';
+import { PreviewPanel, type SectionFocus } from './PreviewPanel.js';
 import { IssuePanel } from './IssuePanel.js';
+import { ExportGate } from './ExportGate.js';
 
 /** 25턴에 한 번 안내한다 — FR-012 AC2. */
 const TURN_NUDGE_AT = 25;
@@ -154,6 +155,16 @@ export function App() {
   const [s, dispatch] = useReducer(reducer, initial);
   const kv = useRef(idbStore()).current;
 
+  // 점검 화면과 섹션 포커스는 문서 상태가 아니라 화면 상태다. PRDState를 오염시키지 않는다.
+  const [gateOpen, setGateOpen] = useState(false);
+  // 같은 섹션을 연속으로 눌러도 effect가 다시 돌아야 하므로 nonce를 함께 올린다.
+  // rAF로 한 틱 비우는 방식은 배경 탭에서 콜백이 지연되어 점프가 통째로 실종된다.
+  const [focus, setFocus] = useState<SectionFocus>(null);
+
+  function jumpTo(id: SectionId) {
+    setFocus((f) => ({ id, nonce: (f?.nonce ?? 0) + 1 }));
+  }
+
   // 새로고침 후 복구 — FR-010 AC2
   useEffect(() => {
     let alive = true;
@@ -182,7 +193,7 @@ export function App() {
 
   // 패치 적용 즉시 갱신된다 — FR-006 AC2. 상태가 바뀔 때만 다시 돈다.
   const issues = useMemo(() => validate(s.prd), [s.prd]);
-  const blocking = issues.filter((i) => i.severity === 'block');
+  const score = useMemo(() => completeness(s.prd), [s.prd]);
 
   function setKey(key: string) {
     dispatch({ type: 'setKey', key });
@@ -249,12 +260,28 @@ export function App() {
         <div className="right">
           <PreviewPanel
             state={s.prd}
+            focus={focus}
             onEdit={(id, content) => dispatch({ type: 'editSection', id, content })}
             onUnlock={(id) => dispatch({ type: 'unlockSection', id })}
           />
-          <IssuePanel issues={issues} canExport={blocking.length === 0} state={s.prd} />
+          <IssuePanel
+            issues={issues}
+            completeness={score}
+            state={s.prd}
+            onJump={jumpTo}
+            onOpenGate={() => setGateOpen(true)}
+          />
         </div>
       </main>
+
+      {gateOpen && (
+        <ExportGate
+          state={s.prd}
+          issues={issues}
+          onJump={jumpTo}
+          onClose={() => setGateOpen(false)}
+        />
+      )}
     </div>
   );
 }

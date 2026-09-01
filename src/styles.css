@@ -217,26 +217,81 @@ body {
   display: flex; flex-direction: column; max-height: 46%;
   border-top: 1px solid var(--line); background: var(--panel);
 }
-.issues-head { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
-.issues-head.blocked { color: var(--danger); }
-.issues-head.pass { color: var(--ok); }
+.issues-head {
+  padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.issues-head.partial strong { color: var(--draft); }
+.issues-head.pass strong { color: var(--ok); }
+.issues-head .dim { color: var(--dim); font-size: 12px; }
+
+/* 진행률 — 개정안 #02 §B5-1. validate() 결과로 계산하므로 추가 비용이 없다. */
+.progress {
+  flex-basis: 100%; height: 4px; border-radius: 2px;
+  background: var(--panel-2); overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: var(--accent);
+  transition: width 240ms ease;
+}
+.issues-head.pass .progress-fill { background: var(--ok); }
 
 .issue-list { flex: 1; overflow-y: auto; margin: 0; padding: 6px 0; list-style: none; }
 .issue-list li {
   display: flex; align-items: baseline; gap: 7px;
   padding: 5px 14px; font-size: 12px; line-height: 1.5;
 }
-.issue-list li.block { border-left: 2px solid var(--danger); }
+.issue-list li.pending { border-left: 2px solid var(--draft); }
 .issue-list li.warn { border-left: 2px solid var(--draft); }
 .issue-list .text { flex: 1; }
 .issue-list .code { color: var(--dim); font-size: 10px; }
+.issue-list .sid.link { min-width: 26px; padding: 0; font-size: 12px; }
+
+.issues-foot { padding: 10px 14px 12px; border-top: 1px solid var(--line); }
+button.primary { background: var(--accent); color: #0f1115; font-weight: 600; }
+button.wide { width: 100%; padding: 9px; font-size: 13px; }
 
 /* --- 내보내기 --- */
 .export { padding: 8px 14px 12px; border-top: 1px solid var(--line); }
 .export-item { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .export-label { flex: 1; font-size: 12px; color: var(--dim); }
 .export-item button { padding: 5px 10px; font-size: 12px; }
-.export-draft { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--draft); }
+
+/* --- 내보내기 전 점검 화면 — FR-005 개정 --------------------------------- */
+
+.modal-box.gate { max-width: 660px; gap: 0; }
+.gate-body { margin-top: 12px; overflow-y: auto; max-height: 58vh; }
+.gate-lead { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
+.gate-lead .hint { display: block; margin-top: 4px; }
+
+.gate-list { list-style: none; margin: 0; padding: 0; }
+.gate-list > li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 0; border-bottom: 1px solid var(--line);
+}
+.gate-item { flex: 1; display: flex; align-items: baseline; gap: 8px; min-width: 240px; font-size: 13px; }
+.gate-item .text { flex: 1; }
+.gate-item .code { color: var(--dim); font-size: 10px; }
+.gate-actions { display: flex; gap: 6px; }
+.gate-actions button { padding: 4px 10px; font-size: 12px; }
+.gate-list.held { opacity: 0.55; }
+
+.gate-held { margin-top: 14px; }
+.gate-held > summary {
+  cursor: pointer; font-size: 12px; color: var(--draft); padding: 6px 0;
+}
+.gate-pass { padding: 18px 0; text-align: center; }
+.gate-pass p { margin: 0; }
+.gate-pass .hint { margin-top: 6px; }
+
+.gate-foot {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+}
+.gate-foot .hint { flex: 1; margin: 0; }
+
+/* 점검 화면에서 [지금 작성]으로 지목된 섹션 */
+.section.focused { box-shadow: inset 3px 0 0 var(--accent); background: var(--panel-2); }
 
 .modal {
   position: fixed; inset: 0; z-index: 50;

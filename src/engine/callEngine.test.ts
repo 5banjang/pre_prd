@@ -246,7 +246,7 @@ describe('runTurn', () => {
     expect(r.state.sections.S0.status).toBe('drafting');
     expect(r.state.openQuestions).toEqual(['예산 한도']);
     expect(r.reply).toContain('예산');
-    expect(r.issues.some((i) => i.severity === 'block')).toBe(true); // 아직 미완성
+    expect(r.issues.some((i) => i.severity === 'incomplete')).toBe(true); // 아직 미완성
     expect(r.usage.inputTokens).toBe(100);
   });
 

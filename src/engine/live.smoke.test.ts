@@ -29,7 +29,7 @@ describe.skipIf(!KEY)(`실제 호출 — ${ENGINE_MODEL.id}`, () => {
     console.log('토큰: in=%d out=%d (thinking=%d) 비용≈$%s',
       r.usage.inputTokens, r.usage.outputTokens, r.usage.thinkingTokens,
       estimateCost(r.usage.inputTokens, r.usage.outputTokens).toFixed(6));
-    console.log('차단 이슈:', r.issues.filter((i) => i.severity === 'block').length);
+    console.log('차단 이슈:', r.issues.filter((i) => i.severity === 'incomplete').length);
 
     // 스펙 §5.2 인터뷰 1단계: S0를 먼저 확정한다
     expect(r.state.sections.S0.status).not.toBe('empty');
@@ -40,6 +40,6 @@ describe.skipIf(!KEY)(`실제 호출 — ${ENGINE_MODEL.id}`, () => {
     expect(r.rejected.filter((x) => x.reason === 'unknown_section')).toHaveLength(0);
 
     // 아직 완성일 리 없다 — 검증기가 막아야 정상
-    expect(r.issues.some((i) => i.severity === 'block')).toBe(true);
+    expect(r.issues.some((i) => i.severity === 'incomplete')).toBe(true);
   });
 });

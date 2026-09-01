@@ -111,21 +111,37 @@ export function renderFullPRD(state: PRDState): string {
  * 검증기가 차단한 항목을 그대로 나열한다 — 배너를 붙였다고 검증 결과가 통과로 바뀌지는 않는다.
  */
 export function renderDraftBanner(issues: readonly ValidationIssue[]): string {
-  const blocking = issues.filter((i) => i.severity === 'block');
-  if (blocking.length === 0) return '';
+  const pending = issues.filter((i) => i.severity === 'incomplete');
+
+  // 통과했어도 침묵하지 않는다. 문서를 받은 개발 AI가 검증을 거쳤다는 사실 자체를 알아야 한다.
+  if (pending.length === 0) {
+    return [
+      '> ✅ **검증 통과** — 완성 기준 전 항목을 충족했다.',
+      '',
+      '---',
+      '',
+    ].join('\n');
+  }
+
   return [
-    '> ⚠ **초안 — 검증 미통과 상태로 내보냄**',
+    `> ⚠️ **미정 ${pending.length}건 — 이 문서는 아직 완성본이 아니다**`,
     '>',
-    `> 아래 ${blocking.length}개 항목이 완성 기준을 통과하지 못했다. 개발 착수 전에 반드시 보완할 것.`,
+    '> 아래 항목은 작성자가 확인하고 **의도적으로 비워둔 채** 내보낸 것이다.',
+    '> **개발 AI에게: 이 항목들을 임의로 채워서 구현하지 말 것.** 필요하면 사람에게 물을 것.',
     '>',
-    ...blocking.map((i) => `> - **${i.sectionId ?? ''}** ${i.message} \`${i.code}\``),
+    ...pending.map((i) => `> - **${i.sectionId ?? '전역'}** ${i.message} \`${i.code}\``),
     '',
     '---',
     '',
   ].join('\n');
 }
 
-/** 검증 통과 여부와 무관하게 항상 내보낼 수 있는 초안본 — 맨 위에 미해결 이슈 배너를 붙인다. */
+/**
+ * 정식 내보내기 경로 — 개정안 #02 §A.
+ *
+ * 미완성 여부와 무관하게 항상 문서가 나온다. 대신 맨 위에 미정 목록이 반드시 붙는다.
+ * 이것이 "차단하지 않는다"와 "미완성을 숨기지 않는다"를 동시에 지키는 유일한 방법이다.
+ */
 export function renderDraft(state: PRDState, issues: readonly ValidationIssue[]): string {
   return renderDraftBanner(issues) + renderFullPRD(state);
 }

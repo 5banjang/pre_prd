@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validate,
   canExport,
+  completeness,
   isTestableAC,
   countListItems,
   parseBudgetUSD,
@@ -68,12 +69,45 @@ const codes = (s: PRDState) => validate(s).map((i) => i.code);
 
 describe('픽스처', () => {
   it('기본 상태는 차단 이슈가 없다', () => {
-    const issues = validate(validState()).filter((i) => i.severity === 'block');
+    const issues = validate(validState()).filter((i) => i.severity === 'incomplete');
     expect(issues).toEqual([]);
   });
 
   it('차단 이슈가 없으면 내보내기가 허용된다', () => {
-    expect(canExport(validState())).toBe(true);
+    expect(completeness(validState()).incomplete).toBe(0);
+  });
+});
+
+// --- 개정안 #02 §A — 검증기는 차단하지 않는다 ------------------------------
+
+describe('원칙 4 개정 — 차단이 아니라 고지', () => {
+  it('미완성 항목이 아무리 많아도 내보내기는 허용된다', () => {
+    const empty = createEmptyState();
+    expect(validate(empty).filter((i) => i.severity === 'incomplete').length).toBeGreaterThan(0);
+    expect(canExport(empty)).toBe(true);
+  });
+
+  it("severity에 'block'은 더 이상 없다", () => {
+    const severities = new Set(validate(createEmptyState()).map((i) => i.severity));
+    expect(severities.has('incomplete' as const)).toBe(true);
+    expect([...severities]).not.toContain('block');
+  });
+
+  it('빈 상태의 완성도는 완성 상태보다 낮다', () => {
+    expect(completeness(createEmptyState()).percent)
+      .toBeLessThan(completeness(validState()).percent);
+  });
+
+  it('완성 상태의 완성도는 100%다', () => {
+    expect(completeness(validState()).percent).toBe(100);
+  });
+
+  it('완성도는 0~100 범위를 벗어나지 않는다', () => {
+    for (const s of [createEmptyState(), validState()]) {
+      const c = completeness(s);
+      expect(c.percent).toBeGreaterThanOrEqual(0);
+      expect(c.percent).toBeLessThanOrEqual(100);
+    }
   });
 });
 
@@ -304,14 +338,14 @@ describe('경고 규칙', () => {
       nfr('NFR-001'), nfr('NFR-002'), nfr('NFR-003'), nfr('NFR-004'),
     ];
     expect(codes(s)).toContain('TOO_MANY_FR');
-    expect(canExport(s)).toBe(true);
+    expect(completeness(s).incomplete).toBe(0);
   });
 
   it('TOO_MANY_INFERRED: inferred 가정 5개 초과', () => {
     const s = validState();
     s.assumptions = Array.from({ length: 6 }, (_, i) => ({ text: `가정${i}`, source: 'inferred' as const }));
     expect(codes(s)).toContain('TOO_MANY_INFERRED');
-    expect(canExport(s)).toBe(true);
+    expect(completeness(s).incomplete).toBe(0);
   });
 
   it('SECTION_STALE: 20턴 이상 empty 유지', () => {
@@ -320,7 +354,7 @@ describe('경고 규칙', () => {
     s.sections.S9.status = 'empty';
     s.sections.S9.updatedAtTurn = 0;
     expect(codes(s)).toContain('SECTION_STALE');
-    expect(canExport(s)).toBe(true);
+    expect(completeness(s).incomplete).toBe(0);
   });
 });
 

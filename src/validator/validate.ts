@@ -1,6 +1,10 @@
-// 완성도 검증기 — 스펙 §6.
+// 완성도 검증기 — 스펙 §6 + 개정안 #02 §A.
 //
-// 이 앱의 최종 판단자다. LLM이 "완성되었습니다"라고 말해도 여기서 거부하면 미완성이다.
+// 이 앱의 최종 판단자다. LLM이 "완성되었습니다"라고 말해도 여기가 미완성이라 하면 미완성이다.
+// 다만 판단의 결과는 **차단이 아니라 고지**다 — 내보내기를 막지 않는다.
+// 무엇이 비었는지 내보내기 직전 점검 화면(FR-005)에 전부 보여주고, 뽑을지는 사용자가 정한다.
+// 대신 남은 항목은 산출물에 '미정'으로 반드시 남는다.
+//
 // 순수 함수로 구현한다. LLM을 호출하지 않는다.
 
 import { KRW_PER_USD } from '../config.js';
@@ -8,7 +12,7 @@ import { SECTION_IDS, type PRDState, type SectionId } from '../types/prd.js';
 import { findUntaggedVendorTerms } from './vendorDict.js';
 
 export interface ValidationIssue {
-  severity: 'block' | 'warn';
+  severity: 'incomplete' | 'warn';
   code: string;
   message: string;
   sectionId?: SectionId;
@@ -107,14 +111,14 @@ export function validate(state: PRDState): ValidationIssue[] {
     if (!s.required) continue;
     if (s.status !== 'confirmed') {
       add({
-        severity: 'block',
+        severity: 'incomplete',
         code: 'MISSING_SECTION',
         sectionId: id,
         message: `${id} ${s.title}: 확정되지 않았습니다 (현재 ${s.status})`,
       });
     } else if (s.content.length < MIN_SECTION_CHARS) {
       add({
-        severity: 'block',
+        severity: 'incomplete',
         code: 'MISSING_SECTION',
         sectionId: id,
         message: `${id} ${s.title}: 내용이 부족합니다 (${s.content.length}자 / 최소 ${MIN_SECTION_CHARS}자)`,
@@ -128,7 +132,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   // NO_FR — FR 3개 미만
   if (frs.length < 3) {
     add({
-      severity: 'block',
+      severity: 'incomplete',
       code: 'NO_FR',
       sectionId: 'S5',
       message: `기능 요구사항이 부족합니다 (${frs.length}개 / 최소 3개)`,
@@ -139,7 +143,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   for (const fr of frs) {
     if (fr.acceptanceCriteria.length < 2) {
       add({
-        severity: 'block',
+        severity: 'incomplete',
         code: 'FR_NO_AC',
         sectionId: 'S5',
         message: `${fr.id}: 인수 조건이 부족합니다 (${fr.acceptanceCriteria.length}개 / 최소 2개)`,
@@ -152,7 +156,7 @@ export function validate(state: PRDState): ValidationIssue[] {
     for (const ac of req.acceptanceCriteria) {
       if (!isTestableAC(ac)) {
         add({
-          severity: 'block',
+          severity: 'incomplete',
           code: 'AC_NOT_TESTABLE',
           sectionId: req.section === 'FR' ? 'S5' : 'S6',
           message: `${req.id}: 검증 불가능한 인수 조건 — "${ac.trim()}". 숫자·조건절·관찰 가능한 동작 중 하나가 필요합니다`,
@@ -164,7 +168,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   // NO_NFR — NFR 4개 미만 (보안/개인정보/성능/에러처리)
   if (nfrs.length < 4) {
     add({
-      severity: 'block',
+      severity: 'incomplete',
       code: 'NO_NFR',
       sectionId: 'S6',
       message: `비기능 요구사항이 부족합니다 (${nfrs.length}개 / 최소 4개 — 보안·개인정보·성능·에러처리)`,
@@ -175,7 +179,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   const edgeCount = countListItems(state.sections.S7.content);
   if (edgeCount < 5) {
     add({
-      severity: 'block',
+      severity: 'incomplete',
       code: 'FEW_EDGE_CASES',
       sectionId: 'S7',
       message: `엣지 케이스가 부족합니다 (${edgeCount}개 / 최소 5개)`,
@@ -185,7 +189,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   // FEW_OPEN_QUESTIONS — 5개 미만
   if (state.openQuestions.length < 5) {
     add({
-      severity: 'block',
+      severity: 'incomplete',
       code: 'FEW_OPEN_QUESTIONS',
       sectionId: 'S10',
       message: `미해결 질문이 부족합니다 (${state.openQuestions.length}개 / 최소 5개)`,
@@ -196,7 +200,7 @@ export function validate(state: PRDState): ValidationIssue[] {
   const s9 = state.sections.S9;
   if (MONETIZATION_RE.test(s9.content) && state.costModel.length === 0) {
     add({
-      severity: 'block',
+      severity: 'incomplete',
       code: 'MONETIZATION_NO_COST',
       sectionId: 'S9',
       message: 'S9에 가격·요금제 언급이 있으나 원가 표(costModel)가 비어 있습니다',
@@ -208,7 +212,7 @@ export function validate(state: PRDState): ValidationIssue[] {
     const s = state.sections[id];
     for (const hit of findUntaggedVendorTerms(s.content)) {
       add({
-        severity: 'block',
+        severity: 'incomplete',
         code: 'UNTAGGED_PROPER_NOUN',
         sectionId: id,
         message: `${id}: "${hit.term}"에 [미검증] 태그나 출처가 없습니다 — "${hit.sentence}"`,
@@ -222,7 +226,7 @@ export function validate(state: PRDState): ValidationIssue[] {
     const total = state.costModel.reduce((sum, l) => sum + l.estimatedCost, 0);
     if (total > budget) {
       add({
-        severity: 'block',
+        severity: 'incomplete',
         code: 'BUDGET_OVERRUN',
         sectionId: 'S9',
         message: `원가 합계 $${total.toFixed(2)}가 S0 예산 상한 $${budget.toFixed(2)}를 초과합니다`,
@@ -266,7 +270,42 @@ export function validate(state: PRDState): ValidationIssue[] {
   return issues;
 }
 
-/** 내보내기 가능 여부. 차단 이슈가 하나도 없어야 한다 — 스펙 설계 원칙 4. */
-export function canExport(state: PRDState): boolean {
-  return !validate(state).some((i) => i.severity === 'block');
+export interface Completeness {
+  /** 아직 채워지지 않은 항목 수 */
+  incomplete: number;
+  /** 알고 넘어가도 되는 항목 수 */
+  warn: number;
+  /** 검사한 규칙 수 */
+  checked: number;
+  /** 0~100. 헤더 진행률 표시용 — 개정안 #02 §B5-1 */
+  percent: number;
+}
+
+/**
+ * 검사한 규칙 대비 통과 비율.
+ *
+ * `validate()`는 위반한 것만 돌려주므로 분모를 따로 세야 한다.
+ * 규칙 하나가 여러 섹션에서 각각 걸리므로(예: MISSING_SECTION) 분모는 고정 상수가 아니라
+ * "검사 대상 수 = 통과 + 위반"으로 잡는다. 섹션 11개 + 요구사항별 검사 + 전역 규칙.
+ */
+export function completeness(state: PRDState): Completeness {
+  const issues = validate(state);
+  const incomplete = issues.filter((i) => i.severity === 'incomplete').length;
+  const warn = issues.filter((i) => i.severity === 'warn').length;
+
+  // 분모: 필수 섹션 수 + 전역 차단 규칙 수(NO_FR·NO_NFR·FEW_OPEN_QUESTIONS·FEW_EDGE_CASES 등 8) + 요구사항 수
+  const required = SECTION_IDS.filter((id) => state.sections[id].required).length;
+  const checked = required + 8 + state.requirements.length;
+  const percent = checked === 0 ? 0 : Math.max(0, Math.round(((checked - incomplete) / checked) * 100));
+
+  return { incomplete, warn, checked, percent };
+}
+
+/**
+ * 내보내기는 **항상 가능하다** — 개정안 #02 §A(타협 불가 원칙 4 개정).
+ * 이 함수는 남아 있던 호출부가 조용히 통과하지 않도록 남겨둔 표식이며, 언제나 true다.
+ * 미완성 항목은 점검 화면(FR-005)에서 사용자가 확인하고 산출물에 '미정'으로 남는다.
+ */
+export function canExport(_state: PRDState): true {
+  return true;
 }

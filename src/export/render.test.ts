@@ -5,10 +5,13 @@ import {
   orderByDependency,
   permissionCandidates,
   renderCompact,
+  renderDraft,
+  renderDraftBanner,
   renderFullPRD,
   renderSetupGuide,
 } from './render.js';
 import { createEmptyState, type PRDState, type Requirement } from '../types/prd.js';
+import type { ValidationIssue } from '../validator/validate.js';
 
 const fr = (id: string, over: Partial<Requirement> = {}): Requirement => ({
   id,
@@ -199,5 +202,61 @@ describe('renderSetupGuide — FR-013', () => {
   it('결정적이다 (AC3)', () => {
     const s = filled();
     expect(renderSetupGuide(s)).toBe(renderSetupGuide(s));
+  });
+});
+
+
+// --- 개정안 #02 §A — 미정 목록은 항상 붙는다 -------------------------------
+
+describe('renderDraftBanner — 미정 고지', () => {
+  const pending: ValidationIssue[] = [
+    { severity: 'incomplete', code: 'FEW_EDGE_CASES', message: '엣지 케이스가 2개뿐입니다', sectionId: 'S7' },
+    { severity: 'incomplete', code: 'NO_NFR', message: 'NFR이 하나도 없습니다' },
+    { severity: 'warn', code: 'TOO_MANY_FR', message: 'FR이 12개를 넘습니다' },
+  ];
+
+  it('미완성이 없어도 침묵하지 않는다 — 통과 사실을 남긴다', () => {
+    const out = renderDraftBanner([]);
+    expect(out).not.toBe('');
+    expect(out).toContain('검증 통과');
+  });
+
+  it('미완성 건수와 각 항목을 나열한다', () => {
+    const out = renderDraftBanner(pending);
+    expect(out).toContain('미정 2건');
+    expect(out).toContain('엣지 케이스가 2개뿐입니다');
+    expect(out).toContain('NFR이 하나도 없습니다');
+    expect(out).toContain('S7');
+  });
+
+  it('경고는 미정으로 세지 않는다', () => {
+    expect(renderDraftBanner(pending)).not.toContain('FR이 12개를 넘습니다');
+  });
+
+  it('개발 AI에게 임의로 채우지 말라고 명시한다', () => {
+    const out = renderDraftBanner(pending);
+    expect(out).toContain('임의로 채워서 구현하지 말 것');
+  });
+
+  it('sectionId가 없는 전역 이슈도 누락하지 않는다', () => {
+    expect(renderDraftBanner(pending)).toContain('전역');
+  });
+});
+
+describe('renderDraft — 정식 내보내기 경로', () => {
+  it('미완성 여부와 무관하게 본문이 항상 나온다', () => {
+    const s = createEmptyState('테스트 프로젝트');
+    const many: ValidationIssue[] = [
+      { severity: 'incomplete', code: 'NO_FR', message: 'FR이 없습니다' },
+    ];
+    const out = renderDraft(s, many);
+    expect(out).toContain('테스트 프로젝트');
+    expect(out).toContain('Handoff Note');
+  });
+
+  it('배너가 본문보다 먼저 온다', () => {
+    const s = createEmptyState('X');
+    const out = renderDraft(s, []);
+    expect(out.indexOf('검증 통과')).toBeLessThan(out.indexOf('Handoff Note'));
   });
 });
