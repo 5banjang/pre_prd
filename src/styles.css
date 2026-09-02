@@ -252,10 +252,35 @@ button.primary { background: var(--accent); color: #0f1115; font-weight: 600; }
 button.wide { width: 100%; padding: 9px; font-size: 13px; }
 
 /* --- 내보내기 --- */
-.export { padding: 8px 14px 12px; border-top: 1px solid var(--line); }
-.export-item { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-.export-label { flex: 1; font-size: 12px; color: var(--dim); }
-.export-item button { padding: 5px 10px; font-size: 12px; }
+/* 산출물 선택 다운로드 — 개정안 #02 §B4 */
+.export { padding: 8px 2px 4px; }
+.export-group { margin-bottom: 16px; }
+.export-group h4 {
+  margin: 0 0 6px; font-size: 12px; font-weight: 600;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.export-group h4 .dim { font-weight: 400; font-size: 11px; }
+.export-item {
+  display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+  border-radius: 6px;
+}
+.export-item:hover { background: var(--panel-2); }
+.export-pick { flex: 1; display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.export-pick input { margin-top: 3px; flex: none; }
+.export-label { display: flex; flex-direction: column; gap: 1px; font-size: 12.5px; }
+.export-label code { font-size: 10.5px; color: var(--dim); }
+.export-label .hint { font-size: 11px; margin: 0; }
+.export-actions { display: flex; gap: 4px; flex: none; }
+.export-item button { padding: 4px 9px; font-size: 11.5px; }
+
+.export-foot {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 2px 2px; border-top: 1px solid var(--line);
+  /* 주 동작이 스크롤 아래로 숨으면 안 된다. 모달 바닥에 붙인다. */
+  position: sticky; bottom: 0; background: var(--panel); z-index: 1;
+}
+.export-foot .hint { flex: 1; margin: 0; min-width: 160px; }
+.export-foot button { padding: 7px 13px; font-size: 12.5px; }
 
 /* --- 내보내기 전 점검 화면 — FR-005 개정 --------------------------------- */
 

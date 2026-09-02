@@ -75,8 +75,8 @@ export function Settings(p: Props) {
       <section>
         <label>세션</label>
         <div className="row">
-          <button className="ghost" onClick={exportState}>⭳ 상태 내보내기</button>
-          <button className="ghost" onClick={() => fileRef.current?.click()}>⭱ 상태 불러오기</button>
+          <button className="ghost" onClick={exportState}>↓ 상태 내보내기</button>
+          <button className="ghost" onClick={() => fileRef.current?.click()}>↑ 상태 불러오기</button>
         </div>
         <input
           ref={fileRef}

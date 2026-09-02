@@ -360,3 +360,104 @@ export function renderSetupGuide(state: PRDState): string {
       : []),
   ].join('\n');
 }
+
+// --- 개정안 #02 §B4 — 산출물 확장 -------------------------------------------
+
+/**
+ * 미정·[미검증] 목록 — **모든 산출물에 빠짐없이 들어간다** (§B4 AC4).
+ *
+ * 원칙 4 개정(차단→고지)의 유일한 방어선이 이것이다. 미완성이 문서에서 사라지면
+ * 개발 AI가 그 자리를 임의로 채우고, 그러면 이 앱의 존재 이유가 없어진다.
+ */
+export function renderUndecided(state: PRDState, issues: readonly ValidationIssue[]): string {
+  const pending = issues.filter((i) => i.severity === 'incomplete');
+  const lines: string[] = ['## 미정 · 미검증 (개발 착수 전 확인)', ''];
+
+  if (pending.length === 0) {
+    lines.push('- ✅ 완성 기준 전 항목 통과. 비워둔 항목 없음.');
+  } else {
+    lines.push(`**미정 ${pending.length}건 — 작성자가 확인하고 의도적으로 비워둔 항목이다.**`, '');
+    lines.push('**개발 AI에게: 아래를 임의로 채워서 구현하지 말 것.** 필요하면 사람에게 물을 것.', '');
+    lines.push(...pending.map((i) => `- [ ] **${i.sectionId ?? '전역'}** ${i.message} \`${i.code}\``));
+  }
+
+  lines.push('');
+  if (state.unverifiedTerms.length > 0) {
+    lines.push(`**[미검증] ${state.unverifiedTerms.length}건 — 공식 문서로 확인할 것.**`, '');
+    lines.push(...state.unverifiedTerms.map((t) => `- [ ] ${t}`));
+  } else {
+    lines.push('**[미검증] 항목 없음.**');
+  }
+
+  return lines.join('\n');
+}
+
+/** FR 의존성을 위반하지 않는 순서의 착수 체크리스트 — §B4 (AI용 `TASKS.md`). */
+export function renderTasks(state: PRDState, issues: readonly ValidationIssue[]): string {
+  const frs = orderByDependency(req(state, 'FR'));
+  const nfrs = req(state, 'NFR');
+  const lines: string[] = [
+    `# ${state.projectName || '(제목 미정)'} — 작업 체크리스트`,
+    '',
+    `v${state.version} · FR ${frs.length}개 · NFR ${nfrs.length}개`,
+    '',
+    '아래는 **의존성을 위반하지 않는 순서**다. 위에서부터 하나씩 끝내고 커밋 메시지에 ID를 남긴다.',
+    '',
+  ];
+
+  if (frs.length === 0) {
+    lines.push('- (FR이 아직 정의되지 않았다)', '');
+  } else {
+    for (const r of frs) {
+      const dep = r.dependsOn.length > 0 ? ` — 선행: ${r.dependsOn.join(', ')}` : '';
+      lines.push(`- [ ] **${r.id}** ${r.title} \`${r.priority}\`${dep}`);
+      lines.push(...r.acceptanceCriteria.map((ac) => `  - [ ] ${ac}`));
+    }
+    lines.push('');
+  }
+
+  if (nfrs.length > 0) {
+    lines.push('## 비기능 요구사항 — 기능 구현과 병행해 확인한다', '');
+    for (const r of nfrs) {
+      lines.push(`- [ ] **${r.id}** ${r.title}`);
+      lines.push(...r.acceptanceCriteria.map((ac) => `  - [ ] ${ac}`));
+    }
+    lines.push('');
+  }
+
+  lines.push(renderUndecided(state, issues));
+  return lines.join('\n');
+}
+
+/** 개발 AI의 프로젝트 지침 — §B4 (AI용 `CLAUDE.md`). 짧게 유지한다. 매 턴 컨텍스트에 실린다. */
+export function renderClaudeMd(state: PRDState, issues: readonly ValidationIssue[]): string {
+  const forbidden = forbiddenList(state);
+  return [
+    `# ${state.projectName || '(제목 미정)'}`,
+    '',
+    state.sections.S1.content.trim().split('\n').slice(0, 6).join('\n') || '(S1 미작성)',
+    '',
+    '전체 PRD: `docs/PRD.md` · 작업 목록: `TASKS.md` · 환경 세팅: `SETUP.md`',
+    '',
+    '## 구현 금지 (Out of Scope)',
+    '',
+    '**좋은 아이디어라도 추가하지 않는다.**',
+    '',
+    ...(forbidden.length > 0 ? forbidden.map((f) => `- ${f}`) : ['- (S3에 명시된 항목 없음)']),
+    '',
+    '## 확정 제약 (변경 불가)',
+    '',
+    state.sections.S0.content.trim() || '(S0 미작성)',
+    '',
+    '## 개발 규칙',
+    '',
+    '- **FR/NFR ID가 작업 단위.** 커밋 메시지에 ID를 남긴다.',
+    '- `Suggestion:` 항목만 재량 변경 가능하며 **변경 시 사유를 기록**한다. 없는 항목은 제약이다.',
+    '- **모델명·가격·API 스펙을 기억으로 쓰지 않는다.** 공식 문서를 확인하고, 불가하면',
+    '  설정 파일에 `TODO: 확인 필요`를 남기고 사용자에게 보고한다.',
+    '- 아래 미정 항목은 **해당 코드 작성 직전에** 사용자에게 확인한다. 임의 결정 금지.',
+    '- PRD 수정이 필요하면 직접 고치지 말고 변경 요청을 사용자에게 제시한다.',
+    '',
+    renderUndecided(state, issues),
+  ].join('\n');
+}

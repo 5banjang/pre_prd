@@ -119,7 +119,7 @@ export function LibraryPanel({
                               <span className="lib-ver">v{snap.version}</span>
                               <span className="dim">{when(snap.at)}</span>
                               <button className="ghost" onClick={() => onDownloadSnapshot(d.id, i)}>
-                                ⭳ 이 판본 받기
+                                ↓ 이 판본 받기
                               </button>
                             </li>
                           ))}
@@ -139,8 +139,8 @@ export function LibraryPanel({
         <div className="lib-foot">
           <button className="primary" disabled={busy} onClick={onCreate}>+ 새 문서</button>
           <span className="spacer" />
-          <button className="ghost" onClick={onExportBackup}>⭳ 전체 백업</button>
-          <button className="ghost" onClick={() => fileInput.current?.click()}>⭱ 백업 가져오기</button>
+          <button className="ghost" onClick={onExportBackup}>↓ 전체 백업</button>
+          <button className="ghost" onClick={() => fileInput.current?.click()}>↑ 백업 가져오기</button>
           <input
             ref={fileInput}
             type="file"
