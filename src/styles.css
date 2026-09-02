@@ -333,3 +333,65 @@ textarea:disabled { opacity: 0.55; }
 .hint { margin: 8px 0 0; color: var(--dim); font-size: 11px; line-height: 1.5; }
 .hint.warn { color: var(--draft); }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* --- 문서 보관함 — FR-016 ------------------------------------------------- */
+
+.header .lib-btn { margin-left: 14px; padding: 5px 10px; font-size: 12px; }
+.header .lib-btn .dim { margin-left: 4px; color: var(--dim); }
+/* 설정 버튼이 오른쪽 끝을 잡고 있어야 한다 — 보관함 버튼은 제목 옆에 붙는다 */
+.header > .ghost.lib-btn { margin-left: 14px; }
+
+.modal-box.library { max-width: 620px; }
+.lib-body { margin-top: 12px; overflow-y: auto; max-height: 52vh; }
+.lib-empty { color: var(--dim); font-size: 13px; text-align: center; padding: 28px 0; margin: 0; }
+
+.lib-list { list-style: none; margin: 0; padding: 0; }
+.lib-list > li {
+  /* 판본 이력이 세 번째 자식으로 붙는다. 줄바꿈시켜 아래로 내린다. */
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+}
+.lib-list > li.current { background: var(--panel-2); }
+
+.lib-open {
+  flex: 1; display: flex; flex-direction: column; gap: 3px;
+  background: none; color: var(--text); text-align: left;
+  padding: 10px 8px; font-weight: 400;
+}
+.lib-open:hover:not(:disabled) { background: var(--panel-2); filter: none; }
+.lib-name { font-size: 13px; font-weight: 600; }
+.lib-badge {
+  margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: var(--accent); color: #0f1115; font-size: 10px; font-weight: 600;
+}
+.lib-meta { font-size: 11px; color: var(--dim); }
+.lib-meta .ok { color: var(--ok); }
+.lib-meta .draft { color: var(--draft); }
+
+.lib-actions { display: flex; gap: 6px; padding-right: 4px; }
+.lib-actions button { padding: 4px 9px; font-size: 12px; }
+button.danger { background: var(--danger); color: #0f1115; font-weight: 600; }
+
+/* 판본 이력 — 개정안 #02 §B2 AC3 */
+.lib-history { flex-basis: 100%; padding: 0 10px 10px; }
+.lib-history > summary {
+  cursor: pointer; font-size: 11px; color: var(--dim);
+  padding: 4px 0; user-select: none;
+}
+.lib-history > summary:hover { color: var(--fg); }
+.lib-history .hint { margin: 6px 0 0; font-size: 11px; }
+.lib-versions { list-style: none; margin: 6px 0 0; padding: 0; }
+.lib-versions > li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 12px;
+}
+.lib-ver { font-weight: 600; min-width: 56px; }
+.lib-versions .dim { flex: 1; font-size: 11px; }
+.lib-versions button { padding: 3px 8px; font-size: 11px; }
+
+.lib-foot {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+}
+.lib-foot .spacer { flex: 1; }
+.lib-foot button { padding: 6px 12px; font-size: 12px; }

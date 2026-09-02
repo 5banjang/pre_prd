@@ -213,6 +213,16 @@ export async function loadSession(kv: KV): Promise<LoadedSession> {
   return { state, apiKey, meta, warnings };
 }
 
+/** 키만 읽는다. 문서 로딩과 분리되어야 보관함이 키를 몰라도 된다 — FR-016. */
+export async function loadApiKey(kv: KV): Promise<string> {
+  try {
+    const k = await kv.get<unknown>(APIKEY_KEY);
+    return typeof k === 'string' ? k : '';
+  } catch {
+    return '';
+  }
+}
+
 export async function saveSessionMeta(kv: KV, meta: SessionMeta): Promise<void> {
   try { await kv.set(SESSION_KEY, meta); } catch { /* 무시 */ }
 }

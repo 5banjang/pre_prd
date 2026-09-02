@@ -15,6 +15,9 @@ interface Props {
   onClearKey: () => void;
   onImport: (state: PRDState, warnings: string[]) => void;
   onReset: () => void;
+  /** 문서 보관함 열기 — FR-016 */
+  onOpenLibrary: () => void;
+  docCount: number;
 }
 
 export function Header(p: Props) {
@@ -24,6 +27,10 @@ export function Header(p: Props) {
   return (
     <header className="header">
       <h1>PRD Architect</h1>
+
+      <button className="ghost lib-btn" onClick={p.onOpenLibrary} title="문서 보관함">
+        문서 {p.docCount > 0 && <span className="dim">{p.docCount}</span>}
+      </button>
 
       <div className="meter">
         <span>턴 {p.state.turn}</span>

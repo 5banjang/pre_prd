@@ -5,7 +5,7 @@
 //  · [건너뛰기]  — 확인했다는 표시. 산출물에는 '미정'으로 남는다.
 //  · [모두 건너뛰고 내보내기] — 하나도 안 채워도 문서가 나온다.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { PRDState, SectionId } from '../types/prd.js';
 import type { ValidationIssue } from '../validator/validate.js';
 import { ExportBar } from './ExportBar.js';
@@ -15,6 +15,13 @@ interface Props {
   issues: readonly ValidationIssue[];
   /** [지금 작성] — 해당 섹션을 펼치고 스크롤한다. 모달은 닫힌다. */
   onJump: (id: SectionId) => void;
+  /**
+   * 산출물을 처음 받아간 순간 한 번만 불린다 — 지금 판본을 스냅샷으로 굳히고
+   * 작업본의 버전을 올린다 (§B2 AC3).
+   *
+   * 3종을 연달아 받아도 그것은 **같은 판본**이므로 한 번만 찍는다.
+   */
+  onExported: () => void;
   onClose: () => void;
 }
 
@@ -23,9 +30,17 @@ function keyOf(i: ValidationIssue): string {
   return `${i.code}:${i.sectionId ?? '-'}`;
 }
 
-export function ExportGate({ state, issues, onJump, onClose }: Props) {
+export function ExportGate({ state, issues, onJump, onExported, onClose }: Props) {
   const [phase, setPhase] = useState<'check' | 'download'>('check');
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
+  // 이 게이트를 여는 동안 판본은 하나다. 파일을 몇 개 받든 한 번만 찍는다.
+  const stamped = useRef(false);
+
+  function take() {
+    if (stamped.current) return;
+    stamped.current = true;
+    onExported();
+  }
 
   const pending = issues.filter((i) => i.severity === 'incomplete');
   const warnings = issues.filter((i) => i.severity === 'warn');
@@ -127,7 +142,7 @@ export function ExportGate({ state, issues, onJump, onClose }: Props) {
           </div>
         ) : (
           <div className="gate-body">
-            <ExportBar state={state} issues={issues} />
+            <ExportBar state={state} issues={issues} onTake={take} />
           </div>
         )}
 

@@ -3,11 +3,17 @@
 import { useState } from 'react';
 import type { PRDState } from '../types/prd.js';
 import { renderCompact, renderDraft, renderSetupGuide } from '../export/render.js';
+import { downloadText, slug } from '../export/download.js';
 import type { ValidationIssue } from '../validator/validate.js';
 
 interface Props {
   state: PRDState;
   issues: readonly ValidationIssue[];
+  /**
+   * 산출물을 실제로 받아갔을 때 한 번 불린다 — 판본을 찍는 신호다 (FR-016 / §B2 AC3).
+   * 미리보기만 열어본 것은 "받았다"가 아니므로 부르지 않는다.
+   */
+  onTake?: () => void;
 }
 
 type Kind = 'full' | 'compact' | 'setup';
@@ -22,23 +28,7 @@ const DOCS: Record<Kind, { label: string; file: string; render: Render }> = {
   setup: { label: '세팅 지침', file: 'SETUP.md', render: renderSetupGuide },
 };
 
-function slug(name: string): string {
-  return (name.trim() || 'prd').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40);
-}
-
-function download(filename: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // 즉시 해제하면 일부 브라우저에서 저장이 취소된다
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-export function ExportBar({ state, issues }: Props) {
+export function ExportBar({ state, issues, onTake }: Props) {
   const [copied, setCopied] = useState<Kind | null>(null);
   const [preview, setPreview] = useState<Kind | null>(null);
 
@@ -55,10 +45,12 @@ export function ExportBar({ state, issues }: Props) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // 클립보드 권한이 없으면 미리보기로 떨어뜨려 직접 복사하게 한다
+      // 클립보드 권한이 없으면 미리보기로 떨어뜨려 직접 복사하게 한다.
+      // 이 경우는 아직 받아간 것이 아니므로 판본을 찍지 않는다.
       setPreview(kind);
       return;
     }
+    onTake?.();
     setCopied(kind);
     setTimeout(() => setCopied(null), 1600);
   }
@@ -73,7 +65,10 @@ export function ExportBar({ state, issues }: Props) {
           </button>
           <button
             className="ghost"
-            onClick={() => download(`${slug(state.projectName)}-${DOCS[kind].file}`, textFor(kind))}
+            onClick={() => {
+              downloadText(`${slug(state.projectName)}-${DOCS[kind].file}`, textFor(kind));
+              onTake?.();
+            }}
           >
             ⭳ .md
           </button>
