@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   validate,
-  canExport,
   completeness,
   isTestableAC,
   countListItems,
@@ -81,10 +80,11 @@ describe('픽스처', () => {
 // --- 개정안 #02 §A — 검증기는 차단하지 않는다 ------------------------------
 
 describe('원칙 4 개정 — 차단이 아니라 고지', () => {
-  it('미완성 항목이 아무리 많아도 내보내기는 허용된다', () => {
+  it('빈 상태에도 미완성 항목만 쌓일 뿐 차단 수단은 없다', () => {
+    // canExport()는 폐기됐다(§A). 내보내기 가부를 묻는 API 자체가 존재하지 않는 것이
+    // "항상 가능하다"의 가장 확실한 보장이다.
     const empty = createEmptyState();
     expect(validate(empty).filter((i) => i.severity === 'incomplete').length).toBeGreaterThan(0);
-    expect(canExport(empty)).toBe(true);
   });
 
   it("severity에 'block'은 더 이상 없다", () => {

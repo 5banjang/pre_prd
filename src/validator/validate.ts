@@ -300,12 +300,3 @@ export function completeness(state: PRDState): Completeness {
 
   return { incomplete, warn, checked, percent };
 }
-
-/**
- * 내보내기는 **항상 가능하다** — 개정안 #02 §A(타협 불가 원칙 4 개정).
- * 이 함수는 남아 있던 호출부가 조용히 통과하지 않도록 남겨둔 표식이며, 언제나 true다.
- * 미완성 항목은 점검 화면(FR-005)에서 사용자가 확인하고 산출물에 '미정'으로 남는다.
- */
-export function canExport(_state: PRDState): true {
-  return true;
-}
