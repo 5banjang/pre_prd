@@ -5,6 +5,7 @@
 
 import { SECTION_DEFS, type PRDState, type Section, type SectionId } from '../types/prd.js';
 import { isPatch, isSectionId, type Patch } from './patch.js';
+import { isVerifiableClaim } from '../validator/vendorDict.js';
 
 /** 적용되지 않은 패치와 그 이유. UI가 사용자에게 알리는 데 쓴다. */
 export interface RejectedPatch {
@@ -154,6 +155,13 @@ export function applyPatches(
 
       case 'add_unverified': {
         const term = patch.term.trim();
+        // 확인할 주장이 없는 이름은 목록에 넣지 않는다. 사용자에게 알릴 일도 아니다 —
+        // 엔진이 과하게 태그한 것이지 사용자가 고칠 것이 아니므로 조용히 흘린다.
+        if (!isVerifiableClaim(term)) {
+          warn(`검증 대상 주장이 없어 [미검증] 목록에서 제외: "${term}"`);
+          applied += 1;
+          break;
+        }
         if (!unverifiedTerms.includes(term)) unverifiedTerms.push(term);
         applied += 1;
         break;

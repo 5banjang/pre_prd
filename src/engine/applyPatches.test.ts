@@ -282,3 +282,28 @@ describe('가정 기록 — §B5-2 "모르겠어요"', () => {
     expect(before.assumptions).toEqual([]);
   });
 });
+
+describe('[미검증] 남발 억제 — 빌더 지적 2026-09-03', () => {
+  const base = baseState();
+
+  it('가격·버전이 붙은 것만 목록에 넣는다', () => {
+    const r = applyPatches(base, [
+      { op: 'add_unverified', term: 'Gemini 3.7 Flash 입력 $0.75/1M' },
+      { op: 'add_unverified', term: 'Vercel 무료 티어' },
+    ], collect());
+    expect(r.state.unverifiedTerms).toHaveLength(2);
+  });
+
+  it('확인할 주장이 없는 이름은 걸러낸다', () => {
+    const c = collect();
+    const r = applyPatches(base, [
+      { op: 'add_unverified', term: 'IndexedDB' },
+      { op: 'add_unverified', term: 'GitHub Pages' },
+      { op: 'add_unverified', term: 'Zod' },
+    ], c);
+    expect(r.state.unverifiedTerms).toEqual([]);
+    // 사용자가 고칠 일이 아니므로 거부 목록에 올리지 않고 콘솔에만 남긴다
+    expect(r.rejected).toEqual([]);
+    expect(c.warnings.join(' ')).toContain('IndexedDB');
+  });
+});

@@ -60,8 +60,14 @@ S9=Cost & Monetization, S10=Open Questions & Assumptions, S11=Deployment & Opera
 # 출력 규칙
 - setSections[].content 는 해당 섹션의 **마크다운 전문**이다. 요약이나 메모가 아니다.
   기존 내용을 교체하므로, 유지할 내용은 다시 포함해야 한다.
+- **아는 것은 다 적는다.** "추후 확정", "TBD", "논의 필요" 같은 자리표시자로 섹션을 채우지 마라.
+  사용자가 말한 것, 대화에서 확정된 것, 제약에서 따라 나오는 것을 **구체적으로** 쓴다.
+  표·목록·예시를 쓰면 개발 AI가 읽기 좋다. 정말 모르는 것만 addOpenQuestions 로 올린다.
 - 확정된 섹션만 status를 "confirmed"로 둔다. 아직 취조 중이면 "drafting"이다.
-- addUnverified 에는 [미검증] 태그를 붙인 **고유명사**만 넣는다. 비평이나 우려사항이 아니다.
+- addUnverified 에는 **확인할 주장이 붙은 것만** 넣는다 — 가격·버전·성능 수치.
+  · 넣는다: "Gemini 3.7 Flash 입력 $0.75/1M", "Vercel 무료 티어 월 100GB"
+  · 넣지 않는다: "IndexedDB", "GitHub Pages", "React" — 확인할 주장이 없는 이름이다.
+    이름만 잔뜩 올리면 정작 확인해야 할 가격·수치가 묻힌다.
 - addOpenQuestions 는 사용자에게 물어야 할 미해결 사항이다. 최소 5개가 모여야 문서가 완성으로 간주된다.
 - addAssumptions 는 **사용자가 정하지 않아 엔진이 대신 정한 것**만 넣는다.
   사용자가 직접 고른 값은 가정이 아니다.

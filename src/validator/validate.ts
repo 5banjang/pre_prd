@@ -108,23 +108,44 @@ export function validate(state: PRDState): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const add = (i: ValidationIssue) => issues.push(i);
 
-  // MISSING_SECTION — 필수 섹션이 confirmed가 아니거나 200자 미만
+  /*
+   * 섹션 상태 — **미정은 진짜 빈 곳에만 붙인다.**
+   *
+   * 빌더 지시(2026-09-03): "글자수가 안 채워졌어도 PRD 문서에 내용을 넣어야지."
+   * 전에는 186자짜리 섹션이 200자에 14자 못 미친다는 이유로 '미정'으로 분류됐다.
+   * 내용이 멀쩡히 있는데 산출물 맨 위 미정 목록에 오르면 개발 AI가 그 항목을
+   * 비어 있는 것으로 읽는다. 그것이야말로 이 앱이 막으려던 일이다.
+   *
+   * 그래서 세 갈래로 나눈다 — 원칙 4의 선(빈 곳은 반드시 남는다)은 그대로다.
+   *   본문 없음        → 미정 (incomplete)
+   *   본문 있고 짧음    → 경고 (warn) · 문서에는 그대로 실린다
+   *   본문 있고 확정 전 → 경고 (warn) · 문서에는 그대로 실린다
+   */
   for (const id of SECTION_IDS) {
     const s = state.sections[id];
     if (!s.required) continue;
-    if (s.status !== 'confirmed') {
+    const body = s.content.trim();
+
+    if (body === '') {
       add({
         severity: 'incomplete',
         code: 'MISSING_SECTION',
         sectionId: id,
-        message: `아직 확정하지 않았습니다 (현재 ${STATUS_LABEL[s.status]})`,
+        message: '아직 비어 있습니다',
       });
-    } else if (s.content.length < MIN_SECTION_CHARS) {
+    } else if (body.length < MIN_SECTION_CHARS) {
       add({
-        severity: 'incomplete',
-        code: 'MISSING_SECTION',
+        severity: 'warn',
+        code: 'SECTION_THIN',
         sectionId: id,
-        message: `내용이 부족합니다 (${s.content.length}자 / 최소 ${MIN_SECTION_CHARS}자)`,
+        message: `내용이 짧습니다 (${body.length}자 / 권장 ${MIN_SECTION_CHARS}자). 문서에는 그대로 실립니다`,
+      });
+    } else if (s.status !== 'confirmed') {
+      add({
+        severity: 'warn',
+        code: 'SECTION_UNCONFIRMED',
+        sectionId: id,
+        message: `아직 확정 전입니다 (현재 ${STATUS_LABEL[s.status]}). 문서에는 그대로 실립니다`,
       });
     }
   }

@@ -255,3 +255,16 @@ describe('SessionMeta — FR-012 AC3 / FR-014', () => {
     expect(loaded.meta.inputTokens).toBe(0);
   });
 });
+
+describe('[미검증] 청소 — 빌더 지적 2026-09-03', () => {
+  it('불러오면서 확인할 주장이 없는 이름을 걷어낸다', () => {
+    const raw = { ...createEmptyState('청소'), unverifiedTerms: [
+      'IndexedDB', 'GitHub Pages', 'Zod',
+      'Gemini 3.7 Flash $0.75/1M', 'Vercel 무료 티어',
+    ] };
+    const r = migrate(raw);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.unverifiedTerms).toEqual(['Gemini 3.7 Flash $0.75/1M', 'Vercel 무료 티어']);
+  });
+});

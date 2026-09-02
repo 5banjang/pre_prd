@@ -104,3 +104,24 @@ export function findUntaggedVendorTerms(content: string): VendorHit[] {
 
   return hits;
 }
+
+/**
+ * 이 말이 **[미검증] 딱지를 붙일 값어치가 있는가.**
+ *
+ * 빌더 지적(2026-09-03): 산출물의 미검증 목록에 `IndexedDB`, `GitHub Pages`,
+ * 심지어 제품 이름까지 올라와 있었다. 확인할 주장이 없는 이름은 확인할 것도 없다.
+ * 목록이 이름으로 가득 차면 정작 확인해야 할 가격·수치가 묻힌다.
+ *
+ * 기준은 §13 Q4에서 벤더 사전에 적용한 것과 같다 —
+ * **버전·수치·가격 같은 검증 대상 주장이 붙어 있을 때만** 태그한다.
+ *   "Gemini 3.7 Flash $0.75/1M"  → 붙인다 (가격)
+ *   "Vercel 무료 티어"            → 붙인다 (무료 주장)
+ *   "IndexedDB"                  → 안 붙인다 (확인할 주장이 없다)
+ */
+export function isVerifiableClaim(term: string): boolean {
+  const t = term.trim();
+  if (t === '') return false;
+  // 숫자가 들어 있다고 다 주장은 아니다. "MP4"의 4는 확인할 것이 없다.
+  // 앞이 띄어쓰기나 하이픈인 숫자만 버전·수치로 본다 — "GPT-4", "Claude Opus 5", "월 30일".
+  return CLAIM_RE.test(t) || /[\s-]\d/.test(t);
+}

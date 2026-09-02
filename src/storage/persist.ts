@@ -6,6 +6,7 @@
 // 저장소 접근은 KV 인터페이스 뒤에 둔다. 브라우저가 없는 테스트에서 메모리 구현으로 갈아끼운다.
 
 import { createEmptyState, SECTION_IDS, type PRDState, type Section } from '../types/prd.js';
+import { isVerifiableClaim } from '../validator/vendorDict.js';
 
 export interface KV {
   get<T>(key: string): Promise<T | undefined>;
@@ -113,7 +114,10 @@ export function migrate(raw: unknown): ParseResult {
     costModel: arr(raw.costModel, (c) => isRecord(c) && typeof c.item === 'string'),
     openQuestions: arr(raw.openQuestions, (q) => typeof q === 'string'),
     assumptions: arr(raw.assumptions, (a) => isRecord(a) && typeof a.text === 'string'),
-    unverifiedTerms: arr(raw.unverifiedTerms, (t) => typeof t === 'string'),
+    // 확인할 주장이 없는 이름(IndexedDB, GitHub Pages …)은 불러오면서 걷어낸다.
+    // 엔진이 과하게 붙여 쌓인 것이지 사용자가 쓴 글이 아니다 — 빌더 지적 2026-09-03.
+    unverifiedTerms: arr<string>(raw.unverifiedTerms, (t) => typeof t === 'string')
+      .filter(isVerifiableClaim),
     // 첨부 흔적. 옛 저장본에는 없는 필드라 없으면 빈 배열이다.
     attachments: arr(raw.attachments, (a) => isRecord(a) && typeof a.name === 'string'),
     history: arr(raw.history, (h) => isRecord(h) && typeof h.text === 'string'),

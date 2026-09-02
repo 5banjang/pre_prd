@@ -14,8 +14,16 @@ export interface RuleExplain {
 
 export const RULE_EXPLAIN: Record<string, RuleExplain> = {
   MISSING_SECTION: {
-    what: '이 항목이 아직 비었거나 초안 상태입니다.',
+    what: '이 항목이 아직 비어 있습니다.',
     why: '빈 채로 넘기면 개발 AI가 그 자리를 스스로 상상해 채웁니다.',
+  },
+  SECTION_THIN: {
+    what: '내용이 있지만 짧습니다.',
+    why: '짧아도 문서에는 그대로 실립니다. 다만 개발 AI가 판단할 근거가 얇아집니다.',
+  },
+  SECTION_UNCONFIRMED: {
+    what: '내용은 있는데 아직 확정하지 않았습니다.',
+    why: '문서에는 그대로 실립니다. 확정해 두면 나중에 뒤집힐 여지가 줄어듭니다.',
   },
   NO_FR: {
     what: '기능 요구사항이 너무 적습니다.',

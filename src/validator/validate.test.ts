@@ -7,6 +7,7 @@ import {
   parseBudgetUSD,
   KRW_PER_USD,
 } from './validate.js';
+import { isVerifiableClaim } from './vendorDict.js';
 import { createEmptyState, type PRDState, type Requirement } from '../types/prd.js';
 
 // --- 픽스처 ---------------------------------------------------------------
@@ -146,17 +147,29 @@ describe('원칙 4 개정 — 차단이 아니라 고지', () => {
 
 // --- §6.1 차단 규칙 10개 — 각각 통과/실패 ----------------------------------
 
-describe('MISSING_SECTION', () => {
-  it('실패: 필수 섹션이 confirmed가 아니면 차단', () => {
+describe('MISSING_SECTION — 미정은 진짜 빈 곳에만', () => {
+  it('비어 있으면 미정이다', () => {
     const s = validState();
-    s.sections.S6.status = 'drafting';
-    expect(codes(s)).toContain('MISSING_SECTION');
+    s.sections.S6.content = '';
+    const issue = validate(s).find((i) => i.sectionId === 'S6');
+    expect(issue).toMatchObject({ code: 'MISSING_SECTION', severity: 'incomplete' });
   });
 
-  it('실패: 필수 섹션이 200자 미만이면 차단', () => {
+  it('내용이 있으면 확정 전이어도 미정이 아니다 — 문서에 그대로 실린다', () => {
     const s = validState();
-    s.sections.S1.content = '짧음';
-    expect(codes(s)).toContain('MISSING_SECTION');
+    s.sections.S6.status = 'drafting';
+    const issue = validate(s).find((i) => i.sectionId === 'S6');
+    expect(issue).toMatchObject({ code: 'SECTION_UNCONFIRMED', severity: 'warn' });
+    expect(codes(s)).not.toContain('MISSING_SECTION');
+  });
+
+  it('짧아도 내용이 있으면 미정이 아니다 — 빌더 지시 2026-09-03', () => {
+    const s = validState();
+    s.sections.S1.content = '내용은 있지만 186자에 못 미치는 짧은 본문';
+    const issue = validate(s).find((i) => i.sectionId === 'S1');
+    expect(issue).toMatchObject({ code: 'SECTION_THIN', severity: 'warn' });
+    expect(issue!.message).toContain('문서에는 그대로 실립니다');
+    expect(codes(s)).not.toContain('MISSING_SECTION');
   });
 
   it('통과: S9는 조건부라 비어 있어도 차단되지 않는다', () => {
@@ -418,5 +431,19 @@ describe('parseBudgetUSD', () => {
 
   it('표기가 없으면 null', () => {
     expect(parseBudgetUSD('예산은 아직 정하지 않았습니다')).toBeNull();
+  });
+});
+
+describe('isVerifiableClaim — [미검증]을 붙일 값어치가 있는가', () => {
+  it('가격·버전·수치가 붙으면 태그한다', () => {
+    for (const t of ['Gemini 3.7 Flash $0.75/1M', 'GPT-4', 'Vercel 무료 티어', '보관 30일']) {
+      expect(isVerifiableClaim(t), t).toBe(true);
+    }
+  });
+
+  it('확인할 주장이 없는 이름은 태그하지 않는다', () => {
+    for (const t of ['IndexedDB', 'GitHub Pages', 'Zod', 'PKZIP', 'MP4 자동 합성 파이프라인', '']) {
+      expect(isVerifiableClaim(t), t).toBe(false);
+    }
   });
 });
