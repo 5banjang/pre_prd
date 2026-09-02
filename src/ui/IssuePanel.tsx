@@ -42,10 +42,12 @@ interface Props {
   onOpenGate: () => void;
 }
 
-export function IssuePanel({ issues, completeness, onJump, onOpenGate }: Props) {
+export function IssuePanel({ issues, completeness, state, onJump, onOpenGate }: Props) {
   const pending = issues.filter((i) => i.severity === 'incomplete');
   const warnings = issues.filter((i) => i.severity === 'warn');
   const done = pending.length === 0;
+  // "모르겠어요"로 넘긴 것 — 내가 정한 게 아니라 엔진이 정한 값이다. 세어서 보여준다.
+  const assumed = state.assumptions.filter((a) => a.source !== 'user').length;
 
   return (
     <section className="issues">
@@ -70,6 +72,14 @@ export function IssuePanel({ issues, completeness, onJump, onOpenGate }: Props) 
       </ul>
 
       <div className="issues-foot">
+        {assumed > 0 && (
+          <p className="assumed-note">
+            <button className="sid link" onClick={() => onJump('S10')}>
+              엔진이 대신 정한 값 {assumed}개
+            </button>
+            <span> — 내가 고른 게 아닙니다. 문서에 가정으로 실리니 한 번 훑어보세요.</span>
+          </p>
+        )}
         <button className="primary wide" onClick={onOpenGate}>문서 뽑기</button>
         <p className="hint">
           {done

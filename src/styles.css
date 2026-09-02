@@ -112,6 +112,12 @@ body {
 .notice.locked { border-color: color-mix(in srgb, var(--draft) 45%, transparent); }
 .notice.nudge { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 
+.assumed-note {
+  margin: 0 0 8px; padding: 8px 10px; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--draft) 12%, transparent);
+  color: var(--dim); font-size: 12px; line-height: 1.55;
+}
+
 /* --- 시작 화면 (개정안 §B5-4) --- */
 .start-cards { display: grid; gap: 10px; margin: 16px 0 14px; text-align: left; }
 .start-card {
