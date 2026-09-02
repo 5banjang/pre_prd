@@ -6,7 +6,8 @@
 //  · [모두 건너뛰고 내보내기] — 하나도 안 채워도 문서가 나온다.
 
 import { useRef, useState } from 'react';
-import type { PRDState, SectionId } from '../types/prd.js';
+import { SECTION_DEFS, type PRDState, type SectionId } from '../types/prd.js';
+import { explain } from '../validator/explain.js';
 import type { ValidationIssue } from '../validator/validate.js';
 import { ExportBar } from './ExportBar.js';
 
@@ -74,8 +75,8 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
           {phase === 'check' && (
             <span className="dim">
               {pending.length === 0
-                ? '전 항목 통과'
-                : `미완성 ${pending.length}건${held.length > 0 ? ` · 건너뜀 ${held.length}` : ''}`}
+                ? '빠진 항목 없음'
+                : `채울 곳 ${pending.length}${held.length > 0 ? ` · 건너뜀 ${held.length}` : ''}`}
             </span>
           )}
           <button className="ghost" onClick={onClose}>닫기</button>
@@ -85,38 +86,47 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
           <div className="gate-body">
             {pending.length === 0 ? (
               <div className="gate-pass">
-                <p><strong>✓ 완성 기준을 전부 충족했습니다.</strong></p>
+                <p><strong>✓ 필수 항목을 전부 채웠습니다.</strong></p>
                 {warnings.length > 0 && (
                   <p className="hint">
-                    경고 {warnings.length}건이 있지만 내보내기에는 영향이 없습니다.
+                    살펴보면 좋을 곳이 {warnings.length}군데 있지만 문서를 받는 데는 지장 없습니다.
                   </p>
                 )}
               </div>
             ) : (
               <>
                 <p className="gate-lead">
-                  아래 항목이 아직 비어 있습니다. 지금 채우거나, 건너뛰고 문서를 받으세요.
+                  아래가 아직 비어 있습니다. 지금 채우거나, 건너뛰고 문서를 받으세요.
                   <br />
                   <span className="hint">건너뛴 항목은 문서 맨 위에 <strong>미정</strong>으로 표시되어
                   개발 AI가 임의로 채우지 않습니다.</span>
                 </p>
 
                 <ul className="gate-list">
-                  {open.map((i) => (
-                    <li key={keyOf(i)}>
-                      <div className="gate-item">
-                        <span className="sid">{i.sectionId ?? '전역'}</span>
-                        <span className="text">{i.message}</span>
-                        <code className="code">{i.code}</code>
-                      </div>
-                      <div className="gate-actions">
-                        {i.sectionId && (
-                          <button onClick={() => writeNow(i)}>지금 작성</button>
-                        )}
-                        <button className="ghost" onClick={() => skip(i)}>건너뛰기</button>
-                      </div>
-                    </li>
-                  ))}
+                  {open.map((i) => {
+                    const e = explain(i.code);
+                    return (
+                      <li key={keyOf(i)}>
+                        <div className="gate-item">
+                          <span className="sid">
+                            {i.sectionId ? SECTION_DEFS[i.sectionId].label : '문서 전체'}
+                          </span>
+                          <span className="text">
+                            {i.message}
+                            {/* 판단 근거 — 비면 무엇이 잘못되는가. 이게 없으면 다 건너뛴다. */}
+                            <span className="why">{e.why}</span>
+                          </span>
+                          <code className="code" title={`검증 규칙 코드: ${i.code}`}>?</code>
+                        </div>
+                        <div className="gate-actions">
+                          {i.sectionId && (
+                            <button onClick={() => writeNow(i)}>지금 작성</button>
+                          )}
+                          <button className="ghost" onClick={() => skip(i)}>건너뛰기</button>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 {held.length > 0 && (
@@ -126,7 +136,9 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
                       {held.map((i) => (
                         <li key={keyOf(i)}>
                           <div className="gate-item">
-                            <span className="sid">{i.sectionId ?? '전역'}</span>
+                            <span className="sid">
+                              {i.sectionId ? SECTION_DEFS[i.sectionId].label : '문서 전체'}
+                            </span>
                             <span className="text">{i.message}</span>
                           </div>
                           <div className="gate-actions">
@@ -150,8 +162,8 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
           <div className="gate-foot">
             <span className="hint">
               {open.length > 0
-                ? `${open.length}건을 남긴 채 내보냅니다.`
-                : '남은 항목이 없습니다.'}
+                ? `${open.length}군데를 비운 채 내보냅니다.`
+                : '비운 곳이 없습니다.'}
             </span>
             <button className="primary" onClick={() => setPhase('download')}>
               {open.length > 0 ? '모두 건너뛰고 내보내기' : '문서 받기'}

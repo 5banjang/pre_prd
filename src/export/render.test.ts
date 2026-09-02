@@ -239,7 +239,7 @@ describe('renderDraftBanner — 미정 고지', () => {
   });
 
   it('sectionId가 없는 전역 이슈도 누락하지 않는다', () => {
-    expect(renderDraftBanner(pending)).toContain('전역');
+    expect(renderDraftBanner(pending)).toContain('문서 전체');
   });
 });
 

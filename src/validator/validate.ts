@@ -8,7 +8,7 @@
 // 순수 함수로 구현한다. LLM을 호출하지 않는다.
 
 import { KRW_PER_USD } from '../config.js';
-import { SECTION_IDS, type PRDState, type SectionId } from '../types/prd.js';
+import { SECTION_DEFS, SECTION_IDS, STATUS_LABEL, type PRDState, type SectionId } from '../types/prd.js';
 import { findUntaggedVendorTerms } from './vendorDict.js';
 
 export interface ValidationIssue {
@@ -117,14 +117,14 @@ export function validate(state: PRDState): ValidationIssue[] {
         severity: 'incomplete',
         code: 'MISSING_SECTION',
         sectionId: id,
-        message: `${id} ${s.title}: 확정되지 않았습니다 (현재 ${s.status})`,
+        message: `아직 확정하지 않았습니다 (현재 ${STATUS_LABEL[s.status]})`,
       });
     } else if (s.content.length < MIN_SECTION_CHARS) {
       add({
         severity: 'incomplete',
         code: 'MISSING_SECTION',
         sectionId: id,
-        message: `${id} ${s.title}: 내용이 부족합니다 (${s.content.length}자 / 최소 ${MIN_SECTION_CHARS}자)`,
+        message: `내용이 부족합니다 (${s.content.length}자 / 최소 ${MIN_SECTION_CHARS}자)`,
       });
     }
   }
@@ -206,7 +206,7 @@ export function validate(state: PRDState): ValidationIssue[] {
       severity: 'incomplete',
       code: 'MONETIZATION_NO_COST',
       sectionId: 'S9',
-      message: 'S9에 가격·요금제 언급이 있으나 원가 표(costModel)가 비어 있습니다',
+      message: '가격·요금제 얘기가 있는데 원가표가 비어 있습니다',
     });
   }
 
@@ -232,7 +232,7 @@ export function validate(state: PRDState): ValidationIssue[] {
         severity: 'incomplete',
         code: 'BUDGET_OVERRUN',
         sectionId: 'S9',
-        message: `원가 합계 $${total.toFixed(2)}가 S0 예산 상한 $${budget.toFixed(2)}를 초과합니다`,
+        message: `원가 합계 $${total.toFixed(2)}가 적어둔 예산 $${budget.toFixed(2)}를 넘습니다`,
       });
     }
   }
@@ -244,7 +244,7 @@ export function validate(state: PRDState): ValidationIssue[] {
       severity: 'warn',
       code: 'TOO_MANY_FR',
       sectionId: 'S5',
-      message: `MVP 기능 요구사항이 많습니다 (${frs.length}개 / 권장 12개 이하). S3 백로그 이관을 검토하세요`,
+      message: `기능이 많습니다 (${frs.length}개 / 권장 12개 이하). 일부를 '${SECTION_DEFS.S3.label}'으로 미루는 것을 검토하세요`,
     });
   }
 
@@ -265,7 +265,7 @@ export function validate(state: PRDState): ValidationIssue[] {
         severity: 'warn',
         code: 'SECTION_STALE',
         sectionId: id,
-        message: `${id} ${s.title}: ${state.turn - s.updatedAtTurn}턴째 비어 있습니다`,
+        message: `${state.turn - s.updatedAtTurn}턴째 비어 있습니다`,
       });
     }
   }

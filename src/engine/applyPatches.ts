@@ -3,13 +3,16 @@
 // 순수 함수다. 입력 상태를 변형하지 않고 새 상태를 돌려준다.
 // LLM 출력은 신뢰할 수 없으므로 형식 위반은 버리되 앱이 죽지 않아야 한다.
 
-import type { PRDState, Section, SectionId } from '../types/prd.js';
+import { SECTION_DEFS, type PRDState, type Section, type SectionId } from '../types/prd.js';
 import { isPatch, isSectionId, type Patch } from './patch.js';
 
 /** 적용되지 않은 패치와 그 이유. UI가 사용자에게 알리는 데 쓴다. */
 export interface RejectedPatch {
   reason: 'unknown_op' | 'unknown_section' | 'section_locked' | 'malformed';
+  /** **화면에 뜨는 문구.** 내부 값(섹션 ID, op 이름)을 넣지 않는다 — 사용자가 고칠 게 아니다. */
   message: string;
+  /** 콘솔·디버깅용 상세. 원인 추적에 필요한 원본 값이 여기 들어간다. */
+  detail?: string;
   sectionId?: SectionId;
   patch: unknown;
 }
@@ -51,7 +54,8 @@ export function applyPatches(
 
   const reject = (r: RejectedPatch) => {
     rejected.push(r);
-    warn(r.message);
+    // 콘솔에는 원본 값을 남긴다. 화면 문구를 다듬는다고 진단이 사라지면 안 된다.
+    warn(r.detail ?? r.message);
   };
 
   for (const raw of patches) {
@@ -63,7 +67,8 @@ export function applyPatches(
       if (op === 'set_section' && !isSectionId(bad?.id)) {
         reject({
           reason: 'unknown_section',
-          message: `존재하지 않는 섹션 ID입니다: "${String(bad?.id)}"`,
+          message: '엔진이 없는 항목을 가리켜 무시했습니다. 다시 시도하면 대개 해결됩니다.',
+          detail: `존재하지 않는 섹션 ID: "${String(bad?.id)}"`,
           patch: raw,
         });
         continue;
@@ -72,9 +77,9 @@ export function applyPatches(
       const known = typeof op === 'string';
       reject({
         reason: known ? 'unknown_op' : 'malformed',
-        message: known
-          ? `알 수 없거나 형식이 잘못된 연산입니다: "${op}"`
-          : '패치 형식이 올바르지 않아 무시했습니다',
+        // 엔진 출력 형식 오류다. 사용자가 고칠 수 있는 게 아니므로 내부 값을 보여주지 않는다.
+        message: '엔진 응답 일부를 알아볼 수 없어 건너뛰었습니다. 문서는 그대로입니다.',
+        detail: known ? `알 수 없는 op: "${op}"` : '패치 형식 위반',
         patch: raw,
       });
       continue;
@@ -89,7 +94,8 @@ export function applyPatches(
           // isPatch가 걸러주지만 방어적으로 남긴다 — 스펙 §11
           reject({
             reason: 'unknown_section',
-            message: `존재하지 않는 섹션 ID입니다: "${patch.id}"`,
+            message: '엔진이 없는 항목을 가리켜 무시했습니다. 다시 시도하면 대개 해결됩니다.',
+            detail: `존재하지 않는 섹션 ID: "${patch.id}"`,
             patch,
           });
           break;
@@ -98,7 +104,7 @@ export function applyPatches(
           reject({
             reason: 'section_locked',
             sectionId: patch.id,
-            message: `${patch.id} ${current.title}: 직접 편집하신 섹션이라 엔진의 갱신을 보호했습니다`,
+            message: `'${SECTION_DEFS[patch.id].label}'은 직접 편집하신 항목이라 엔진이 덮어쓰지 못하게 막았습니다.`,
             patch,
           });
           break;

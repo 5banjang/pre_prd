@@ -10,7 +10,7 @@
 // 인쇄된다는 조건이 라이브러리 편의보다 우선한다.
 
 import { ENGINE_MODEL } from '../config.js';
-import { SECTION_IDS, type PRDState, type Requirement } from '../types/prd.js';
+import { SECTION_DEFS, SECTION_IDS, type PRDState, type Requirement } from '../types/prd.js';
 import type { ValidationIssue } from '../validator/validate.js';
 import { escapeHtml, mdToHtml } from './markdown.js';
 import { forbiddenList, orderByDependency } from './render.js';
@@ -67,6 +67,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
 .toc ol { margin: 6px 0 0; }
 .toc a { color: var(--accent); text-decoration: none; }
 .toc a:hover { text-decoration: underline; }
+.toc li .meta { font-size: 11px; margin: 0; }
+/* 항목 번호와 영문 정식 명칭은 부차 정보다 — 개발 AI가 참조하는 키이지 독자용이 아니다. */
+.sec-code { font-size: 11px; font-weight: 400; color: var(--dim); margin-left: 6px; }
 figure { margin: 0; }
 .graph { margin: 14px 0; color: var(--fg); text-align: center; }
 .graph svg { max-width: 100%; height: auto; }
@@ -121,7 +124,9 @@ function undecidedHtml(state: PRDState, issues: readonly ValidationIssue[]): str
       ` 개발 AI는 이 자리를 임의로 채우지 말고 사람에게 물을 것.</p>`,
       '<ul>',
       ...pending.map((i) =>
-        `<li>☐ <strong>${escapeHtml(i.sectionId ?? '전역')}</strong> ${escapeHtml(i.message)} <code>${escapeHtml(i.code)}</code></li>`),
+        `<li>☐ <strong>${escapeHtml(i.sectionId ? SECTION_DEFS[i.sectionId].label : '문서 전체')}</strong>`
+        + ` ${escapeHtml(i.message)}`
+        + ` <code title="검증 규칙 코드">${escapeHtml(i.code)}</code></li>`),
       '</ul>',
     );
   }
@@ -276,13 +281,17 @@ export function renderPrdHtml(state: PRDState, issues: readonly ValidationIssue[
     + `작성 엔진 ${escapeHtml(ENGINE_MODEL.id)}${ENGINE_MODEL.verified ? '' : ' <span class="tag-unverified">[미검증 단가]</span>'}</p>`,
     undecidedHtml(state, issues),
     '<nav class="toc"><strong>목차</strong><ol>',
-    ...shown.map((id) => `<li><a href="#${id}">${escapeHtml(state.sections[id].title)}</a></li>`),
+    ...shown.map((id) =>
+      `<li><a href="#${id}">${escapeHtml(SECTION_DEFS[id].label)}</a>`
+      + ` <span class="meta">${escapeHtml(id)} · ${escapeHtml(state.sections[id].title)}</span></li>`),
     '</ol></nav>',
   ];
 
   for (const id of shown) {
     const s = state.sections[id];
-    body.push(`<h2 id="${id}">${escapeHtml(id)}. ${escapeHtml(s.title)}</h2>`);
+    body.push(
+      `<h2 id="${id}">${escapeHtml(SECTION_DEFS[id].label)}`
+      + ` <span class="sec-code">${escapeHtml(id)} · ${escapeHtml(s.title)}</span></h2>`);
     body.push(mdToHtml(s.content.trim()));
 
     if (id === 'S5') {

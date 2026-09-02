@@ -208,3 +208,38 @@ describe('섹션 잠금 — §13 Q2', () => {
     expect(r.state.sections.S4.content).toBe('엔진 갱신');
   });
 });
+
+// 화면에 뜨는 문구에 내부 값이 새면 안 된다 — 사용자는 `S99`나 `set_sektion`이 뭔지 모른다.
+describe('사용자 문구와 진단 분리', () => {
+  const base = createEmptyState('테스트');
+
+  it('섹션 ID 오류: 화면 문구엔 ID가 없고 콘솔엔 남는다', () => {
+    const warnings: string[] = [];
+    const r = applyPatches(
+      base,
+      [{ op: 'set_section', id: 'S99', content: 'x', status: 'drafting' }],
+      { onWarn: (m) => warnings.push(m) },
+    );
+    expect(r.rejected[0]!.message).not.toContain('S99');
+    expect(r.rejected[0]!.detail).toContain('S99');
+    expect(warnings[0]).toContain('S99');
+  });
+
+  it('알 수 없는 op: 화면 문구엔 op 이름이 없다', () => {
+    const r = applyPatches(base, [{ op: 'set_sektion', id: 'S1' }], { onWarn: () => {} });
+    expect(r.rejected[0]!.message).not.toContain('set_sektion');
+    expect(r.rejected[0]!.detail).toContain('set_sektion');
+  });
+
+  it('잠긴 섹션: 영문 명칭 대신 한글 이름으로 알린다', () => {
+    const locked = editSection(base, 'S7', '손으로 쓴 내용');
+    const r = applyPatches(
+      locked,
+      [{ op: 'set_section', id: 'S7', content: '엔진이 덮어쓰려 함', status: 'drafting' }],
+      { onWarn: () => {} },
+    );
+    expect(r.rejected[0]!.message).toContain('예외와 실패 상황');
+    expect(r.rejected[0]!.message).not.toContain('Edge Cases');
+    expect(r.rejected[0]!.sectionId).toBe('S7');
+  });
+});

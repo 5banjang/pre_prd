@@ -4,7 +4,7 @@
 // 여기 있는 함수는 전부 순수 함수이며 LLM을 호출하지 않는다.
 
 import { ENGINE_MODEL } from '../config.js';
-import { SECTION_IDS, type PRDState, type Requirement, type SectionId } from '../types/prd.js';
+import { SECTION_DEFS, SECTION_IDS, type PRDState, type Requirement, type SectionId } from '../types/prd.js';
 import type { ValidationIssue } from '../validator/validate.js';
 
 /** 압축본 상한 — FR-009 AC2. 초과 시 Must만 남긴다. */
@@ -23,6 +23,14 @@ function renderRequirement(r: Requirement): string {
     ...r.acceptanceCriteria.map((ac) => `  - [ ] ${ac}`),
     `- **우선순위:** ${r.priority}${deps}`,
   ].join('\n');
+}
+
+/**
+ * 미정 항목이 어디 것인지 한 줄로. 개발 AI용 문서에는 **항목 번호와 한글 이름을 함께** 쓴다.
+ * 번호는 본문 제목과 대조하는 키이고, 이름은 사람이 읽는 부분이다.
+ */
+function issueWhere(i: ValidationIssue): string {
+  return i.sectionId ? `${i.sectionId} ${SECTION_DEFS[i.sectionId].label}` : '문서 전체';
 }
 
 /** S3(Out of Scope)를 "구현 금지" 목록으로 뽑는다 — FR-009 AC1, FR-013 AC1. */
@@ -129,7 +137,7 @@ export function renderDraftBanner(issues: readonly ValidationIssue[]): string {
     '> 아래 항목은 작성자가 확인하고 **의도적으로 비워둔 채** 내보낸 것이다.',
     '> **개발 AI에게: 이 항목들을 임의로 채워서 구현하지 말 것.** 필요하면 사람에게 물을 것.',
     '>',
-    ...pending.map((i) => `> - **${i.sectionId ?? '전역'}** ${i.message} \`${i.code}\``),
+    ...pending.map((i) => `> - **${issueWhere(i)}** ${i.message} \`${i.code}\``),
     '',
     '---',
     '',
@@ -378,7 +386,7 @@ export function renderUndecided(state: PRDState, issues: readonly ValidationIssu
   } else {
     lines.push(`**미정 ${pending.length}건 — 작성자가 확인하고 의도적으로 비워둔 항목이다.**`, '');
     lines.push('**개발 AI에게: 아래를 임의로 채워서 구현하지 말 것.** 필요하면 사람에게 물을 것.', '');
-    lines.push(...pending.map((i) => `- [ ] **${i.sectionId ?? '전역'}** ${i.message} \`${i.code}\``));
+    lines.push(...pending.map((i) => `- [ ] **${issueWhere(i)}** ${i.message} \`${i.code}\``));
   }
 
   lines.push('');

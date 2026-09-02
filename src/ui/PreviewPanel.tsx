@@ -3,7 +3,10 @@
 // 상태 표시: ● confirmed / ◐ drafting / ○ empty (스펙 §10)
 
 import { useEffect, useRef, useState } from 'react';
-import { SECTION_IDS, type PRDState, type Section, type SectionId } from '../types/prd.js';
+import {
+  SECTION_DEFS, SECTION_IDS, STATUS_LABEL,
+  type PRDState, type Section, type SectionId,
+} from '../types/prd.js';
 
 /** 어느 섹션을 지목했는가 + 몇 번째 지목인가. nonce가 없으면 같은 섹션 재클릭이 무시된다. */
 export type SectionFocus = { id: SectionId; nonce: number } | null;
@@ -53,11 +56,13 @@ function SectionRow(
     <div className={`section ${s.status}${focused ? ' focused' : ''}`} ref={box} id={`sec-${s.id}`}>
       {/* 헤더 클릭 시 접기/펴기 — FR-006 AC3 */}
       <button className="section-head" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        <span className={`mark ${s.status}`}>{MARK[s.status]}</span>
-        <span className="sid">{s.id}</span>
-        <span className="stitle">{s.title}</span>
+        <span className={`mark ${s.status}`} title={STATUS_LABEL[s.status]}>{MARK[s.status]}</span>
+        <span className="stitle">{SECTION_DEFS[s.id].label}</span>
+        <span className="sid" title={`문서상 항목 번호 · ${s.title}`}>{s.id}</span>
         {s.locked && <span className="lock" title="직접 편집한 섹션입니다">🔒</span>}
-        {!s.required && <span className="cond" title="조건부 필수">조건부</span>}
+        {!s.required && (
+          <span className="cond" title="해당될 때만 필요합니다">해당 시</span>
+        )}
         <span className="chars">{s.content.length > 0 ? `${s.content.length}자` : ''}</span>
       </button>
 
@@ -73,7 +78,13 @@ function SectionRow(
             </>
           ) : (
             <>
-              <pre className="md">{s.content || '아직 비어 있습니다.'}</pre>
+              {s.content
+                ? <pre className="md">{s.content}</pre>
+                : (
+                  <p className="section-hint">
+                    <strong>아직 비어 있습니다.</strong> {SECTION_DEFS[s.id].hint}
+                  </p>
+                )}
               <div className="row">
                 <button className="ghost" onClick={startEdit}>직접 편집</button>
                 {s.locked && (
@@ -99,8 +110,16 @@ export function PreviewPanel({ state, onEdit, onUnlock, focus = null }: Props) {
       <div className="preview-head">
         <h2>PRD 미리보기</h2>
         <div className="counts">
-          FR {frs} · NFR {nfrs} · 질문 {state.openQuestions.length}
-          {state.unverifiedTerms.length > 0 && ` · [미검증] ${state.unverifiedTerms.length}`}
+          <span title="앱이 해야 하는 일">기능 {frs}</span>
+          {' · '}
+          <span title="보안·성능 등 기능이 아닌 조건">품질 {nfrs}</span>
+          {' · '}
+          <span title="아직 못 정한 것">미해결 {state.openQuestions.length}</span>
+          {state.unverifiedTerms.length > 0 && (
+            <span title="확인되지 않은 서비스명·가격·수치">
+              {' · '}미검증 {state.unverifiedTerms.length}
+            </span>
+          )}
         </div>
       </div>
 
