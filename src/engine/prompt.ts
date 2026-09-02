@@ -27,11 +27,23 @@ export function recentHistory(
   return history.slice(-maxTurns);
 }
 
-function renderHistory(entries: readonly HistoryEntry[]): string {
+/**
+ * 잘린 이력이 있으면 **그 사실을 엔진에게 명시한다.**
+ *
+ * M7 실사용에서 잡힌 문제: 이 블록이 전체 대화인지 잘린 것인지 알려주지 않으니
+ * 엔진이 창 밖의 발화를 "원문 인용"이라며 지어냈다. 유실 자체는 설계대로지만
+ * (원칙 1 — 상태는 앱이 소유), **유실을 모르는 것**은 설계가 아니라 결함이다.
+ */
+function renderHistory(entries: readonly HistoryEntry[], omitted: number): string {
   if (entries.length === 0) return '(이전 대화 없음. 이번이 첫 턴이다.)';
-  return entries
-    .map((e) => `[${e.role === 'user' ? '사용자' : '엔진'}] ${e.text}`)
-    .join('\n');
+  const lines = entries.map((e) => `[${e.role === 'user' ? '사용자' : '엔진'}] ${e.text}`);
+  if (omitted > 0) {
+    lines.unshift(
+      `(앞선 ${omitted}턴은 이 프롬프트에 실리지 않았다. 그 내용은 위 상태 JSON에만`
+      + ' 반영돼 있다. **아래에 없는 발화를 인용하거나 원문을 지어내지 마라.**)',
+    );
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -46,7 +58,10 @@ export function buildTurnPrompt(state: PRDState, userInput: string): string {
     '```',
     '',
     `## 직전 대화 (최근 ${MAX_HISTORY_TURNS}턴)`,
-    renderHistory(recentHistory(state.history)),
+    renderHistory(
+      recentHistory(state.history),
+      Math.max(0, state.history.length - MAX_HISTORY_TURNS),
+    ),
     '',
     '## 사용자 최신 입력',
     userInput,

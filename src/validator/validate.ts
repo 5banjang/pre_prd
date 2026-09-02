@@ -49,7 +49,10 @@ const OBSERVABLE_STEMS = [
 ].join('|');
 const OBSERVABLE_ENDINGS =
   '된다|한다|됩니다|합니다|되어야|해야|되며|하며|되고|하고|된|한|됨|함|가능|불가|되지|하지|되면|하면';
-const HAS_OBSERVABLE = new RegExp(`(${OBSERVABLE_STEMS})\\s*(${OBSERVABLE_ENDINGS})`);
+// `-링`은 영어 -ing를 들여온 한국어 접미사이며 매우 규칙적이다(렌더링·필터링·스크롤링).
+// 이걸 허용하지 않으면 `렌더된다`는 통과하는데 **`렌더링된다`가 차단된다.**
+// M7 실사용에서 정상 AC가 이것 때문에 막혔다.
+const HAS_OBSERVABLE = new RegExp(`(${OBSERVABLE_STEMS})(링)?\\s*(${OBSERVABLE_ENDINGS})`);
 
 /**
  * AC 한 줄이 검증 가능한지 판단한다 — 스펙 §6.2.
