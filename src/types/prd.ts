@@ -47,6 +47,28 @@ export interface Assumption {
   source: 'user' | 'default' | 'inferred';
 }
 
+export type AttachmentKind = 'document' | 'audio';
+
+/**
+ * 첨부 1건의 **흔적** — 개정안 #02 §B1.
+ *
+ * 원본 바이트는 여기 없고 어디에도 저장하지 않는다. 한 번 읽어 섹션에 반영한 뒤 버린다.
+ * 첨부를 대화 컨텍스트에 남기면 매 턴 재전송돼 비용이 턴 수에 비례해 폭증한다.
+ */
+export interface AttachmentRecord {
+  id: string;
+  kind: AttachmentKind;
+  /** 파일명. 원본 바이트는 저장하지 않는다. */
+  name: string;
+  bytes: number | null;
+  extractedAtTurn: number;
+  /** 이 첨부 1건이 쓴 토큰 — FR-012 누적에 합산된다 */
+  tokensUsed: number;
+  /** 엔진이 요약한 한 문단. 원문이 아니다. */
+  summary: string;
+  touchedSections: SectionId[];
+}
+
 export interface HistoryEntry {
   turn: number;
   role: 'user' | 'engine';
@@ -68,6 +90,8 @@ export interface PRDState {
   assumptions: Assumption[];
   /** [미검증] 태그가 붙은 고유명사 수집 */
   unverifiedTerms: string[];
+  /** 읽어들인 자료의 흔적. 원본은 남지 않는다 — 개정안 §B1 */
+  attachments: AttachmentRecord[];
   history: HistoryEntry[];
 }
 
@@ -184,6 +208,7 @@ export function createEmptyState(projectName = ''): PRDState {
     openQuestions: [],
     assumptions: [],
     unverifiedTerms: [],
+    attachments: [],
     history: [],
   };
 }

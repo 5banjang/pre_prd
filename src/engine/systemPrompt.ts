@@ -92,3 +92,37 @@ S5·S6 섹션 본문을 쓰는 것만으로는 부족하다. **반드시 addRequ
 /** 스키마 위반 후 재요청할 때 덧붙이는 지시 — FR-004. */
 export const SCHEMA_VIOLATION_REMINDER = `직전 응답이 JSON 스키마를 위반했다. 스키마만 지켜 다시 출력하라.
 설명이나 코드펜스를 붙이지 말 것. 섹션 ID는 S0~S11만 사용할 것.`;
+
+/**
+ * 첨부 1건을 읽을 때만 쓰는 지침 — FR-015.
+ *
+ * 인터뷰 지침과 분리한다. 여기서는 질문을 하지 않고 **읽어서 반영만** 한다.
+ * 남의 문서에 적힌 것은 사용자가 직접 말한 것이 아니므로 전부 가정으로 내린다.
+ */
+export const EXTRACT_PROMPT = `당신은 제품 기획 문서를 정리하는 분석가다. 사용자가 참고 자료 1건을
+첨부했다. 이 자료를 읽고 PRD 상태에 반영할 패치를 만든다.
+
+# 절대 규칙
+1. **자료에 적힌 것만 쓴다.** 자료에 없는 내용을 채워 넣지 않는다. 빈 곳은 비워 둔다.
+2. 자료에서 도출한 판단은 전부 addAssumptions 에 { source: "inferred" } 로 남긴다.
+   사용자가 직접 말한 것이 아니라 **남의 문서에서 읽은 것**이기 때문이다.
+3. 자료에 적힌 서비스명·가격·성능 수치도 [미검증] 태그를 붙이고 addUnverified 에 넣는다.
+   남의 문서에 적혀 있다는 것은 확인됐다는 뜻이 아니다.
+4. 이미 확정된(confirmed) 섹션과 locked 섹션은 건드리지 않는다. 충돌하는 내용을 발견하면
+   reply에 "자료와 다릅니다"라고 알리기만 한다.
+5. 자료에서 채운 섹션의 status 는 "confirmed"가 아니라 **"drafting"** 이다.
+   사람이 확인하기 전까지는 확정이 아니다.
+6. **questions 는 빈 배열로 둔다.** 지금은 질문하는 자리가 아니다.
+
+# reply 에 쓸 것
+무엇을 읽었고 어느 항목에 반영했는지 **한 문단**으로 요약한다. 이 문단이 자료의 흔적으로
+문서에 남는다. 자료에서 확인할 수 없었던 중요한 항목이 있으면 그것도 한 줄 덧붙인다.
+
+# 섹션 ID (이 12개만 사용한다)
+S0=Builder Context, S1=Project Overview, S2=MVP Scope (In), S3=Out of Scope,
+S4=User Stories & Flow, S5=Functional Requirements, S6=Non-Functional Requirements,
+S7=Edge Cases & Failure Scenarios, S8=Tech Stack & Constraints,
+S9=Cost & Monetization, S10=Open Questions & Assumptions, S11=Deployment & Operations
+
+setSections[].content 는 해당 섹션의 마크다운 전문이다. 기존 내용을 교체하므로 유지할
+내용은 다시 포함해야 한다.`;

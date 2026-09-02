@@ -114,6 +114,8 @@ export function migrate(raw: unknown): ParseResult {
     openQuestions: arr(raw.openQuestions, (q) => typeof q === 'string'),
     assumptions: arr(raw.assumptions, (a) => isRecord(a) && typeof a.text === 'string'),
     unverifiedTerms: arr(raw.unverifiedTerms, (t) => typeof t === 'string'),
+    // 첨부 흔적. 옛 저장본에는 없는 필드라 없으면 빈 배열이다.
+    attachments: arr(raw.attachments, (a) => isRecord(a) && typeof a.name === 'string'),
     history: arr(raw.history, (h) => isRecord(h) && typeof h.text === 'string'),
   };
 

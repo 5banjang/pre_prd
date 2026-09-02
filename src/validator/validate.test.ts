@@ -116,6 +116,21 @@ describe('원칙 4 개정 — 차단이 아니라 고지', () => {
       .toBeLessThan(completeness(validState()).percent);
   });
 
+  it('자료를 넣어 초안이 채워지면 완성도가 올라간다 — 떨어지면 안 된다', () => {
+    // 실측에서 나온 회귀: 섹션 8개가 초안으로 차고 요구사항 4개가 등록됐는데 21% → 9%였다.
+    const before = createEmptyState();
+    const after = createEmptyState();
+    for (const id of ['S0', 'S1', 'S2', 'S3', 'S8', 'S9', 'S10', 'S11'] as const) {
+      after.sections[id] = { ...after.sections[id], content: '자료에서 읽은 내용', status: 'drafting' };
+    }
+    after.requirements = ['FR-001', 'FR-002', 'FR-003', 'FR-004'].map((id) => ({
+      id, title: '제목', description: '설명', acceptanceCriteria: ['조건 시 표시된다', '3초 이내'],
+      priority: 'Must' as const, dependsOn: [], section: 'FR' as const,
+    }));
+
+    expect(completeness(after).percent).toBeGreaterThan(completeness(before).percent);
+  });
+
   it('완성 상태의 완성도는 100%다', () => {
     expect(completeness(validState()).percent).toBe(100);
   });

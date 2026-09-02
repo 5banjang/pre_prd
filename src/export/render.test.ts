@@ -260,3 +260,25 @@ describe('renderDraft — 정식 내보내기 경로', () => {
     expect(out.indexOf('검증 통과')).toBeLessThan(out.indexOf('Handoff Note'));
   });
 });
+
+describe('읽어들인 자료 — FR-015', () => {
+  it('어느 항목이 자료에서 왔는지 문서에 남긴다', () => {
+    const s = createEmptyState('산책 메이트');
+    s.attachments = [{
+      id: 'a1', kind: 'document', name: '기획메모.md', bytes: 761,
+      extractedAtTurn: 0, tokensUsed: 1200,
+      summary: '배경과 범위를 읽어 반영했습니다.',
+      touchedSections: ['S1', 'S2'],
+    }];
+    const md = renderDraft(s, []);
+    expect(md).toContain('읽어들인 자료');
+    expect(md).toContain('기획메모.md');
+    expect(md).toContain('S1, S2');
+    expect(md).toContain('배경과 범위를 읽어 반영했습니다.');
+  });
+
+  it('자료가 없으면 그 절은 나오지 않는다', () => {
+    const s = createEmptyState('빈 문서');
+    expect(renderDraft(s, [])).not.toContain('읽어들인 자료');
+  });
+});

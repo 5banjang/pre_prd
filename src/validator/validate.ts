@@ -299,7 +299,23 @@ export function completeness(state: PRDState): Completeness {
   // 분모: 필수 섹션 수 + 전역 차단 규칙 수(NO_FR·NO_NFR·FEW_OPEN_QUESTIONS·FEW_EDGE_CASES 등 8) + 요구사항 수
   const required = SECTION_IDS.filter((id) => state.sections[id].required).length;
   const checked = required + 8 + state.requirements.length;
-  const percent = checked === 0 ? 0 : Math.max(0, Math.round(((checked - incomplete) / checked) * 100));
+
+  /*
+   * 내용은 있는데 아직 확정 전인 섹션은 **절반만** 쳐준다.
+   *
+   * 실측(2026-09-02): 자료를 첨부해 8개 섹션이 한꺼번에 초안으로 채워졌는데 완성도가
+   * 21% → 9%로 **떨어졌다.** 빈 섹션과 초안 섹션을 똑같이 0점으로 보는 사이,
+   * 요구사항이 등록되며 분모만 늘었기 때문이다. 진척이 후퇴로 보이면 숫자가 거짓말을 한다.
+   * 이슈 목록과 점검 화면은 그대로 전부 보여주므로 고지가 약해지지는 않는다.
+   */
+  const drafting = SECTION_IDS.filter((id) => {
+    const s = state.sections[id];
+    return s.required && s.status !== 'confirmed' && s.content.trim() !== '';
+  }).length;
+
+  const earned = checked - incomplete + drafting * 0.5;
+  const percent = checked === 0 ? 0
+    : Math.min(100, Math.max(0, Math.round((earned / checked) * 100)));
 
   return { incomplete, warn, checked, percent };
 }

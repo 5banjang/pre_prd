@@ -104,6 +104,17 @@ export function renderFullPRD(state: PRDState): string {
     parts.push('---', '');
   }
 
+  // 어느 내용이 첨부 자료에서 왔는지 개발 AI가 알아야 한다. 원본은 남지 않으므로
+  // 이 목록이 유일한 출처 표시다 — FR-015. S10이 비어도 나와야 하므로 부록에 둔다.
+  if (state.attachments.length > 0) {
+    parts.push('## 부록 — 읽어들인 자료', '',
+      '아래 자료를 1회 읽어 반영했다. **원본은 이 문서에 없다.**', '',
+      ...state.attachments.map((a) => {
+        const where = a.touchedSections.length > 0 ? ` → ${a.touchedSections.join(', ')}` : '';
+        return `- **${a.name}** (${a.kind === 'audio' ? '녹음' : '문서'})${where}\n  - ${a.summary}`;
+      }), '', '---', '');
+  }
+
   if (state.unverifiedTerms.length > 0) {
     parts.push('## 부록 — [미검증] 항목', '',
       '아래는 확인되지 않은 외부 정보다. 개발 착수 전 공식 문서에서 검증할 것.', '',

@@ -214,6 +214,11 @@ export interface CallOptions {
   systemPrompt: string;
   /** 사용자 메시지들. 재시도 시 스키마 위반 안내가 뒤에 덧붙는다. */
   userParts: string[];
+  /**
+   * 첨부 원본 — FR-015. 이 호출 **한 번에만** 실린다. 상태에도 이력에도 남기지 않는다.
+   * REST 형식은 공식 문서 확인(2026-09-02): `inline_data: { mime_type, data }`.
+   */
+  inlineParts?: readonly { mimeType: string; dataBase64: string }[];
   fetchImpl?: typeof fetch;
   modelId?: string;
   signal?: AbortSignal;
@@ -246,7 +251,15 @@ export async function callGemini(opts: CallOptions): Promise<RawEngineResponse> 
 
   const body = {
     system_instruction: { parts: [{ text: opts.systemPrompt }] },
-    contents: [{ role: 'user', parts: opts.userParts.map((text) => ({ text })) }],
+    contents: [{
+      role: 'user',
+      parts: [
+        ...opts.userParts.map((text) => ({ text })),
+        ...(opts.inlineParts ?? []).map((p) => ({
+          inline_data: { mime_type: p.mimeType, data: p.dataBase64 },
+        })),
+      ],
+    }],
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,

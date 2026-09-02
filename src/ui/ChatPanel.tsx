@@ -7,6 +7,8 @@ import type { EngineError } from '../engine/geminiAdapter.js';
 import type { RejectedPatch } from '../engine/applyPatches.js';
 import { answeredCount, composeAnswer, type AnswerMap, type EngineQuestion } from '../engine/question.js';
 import { QuestionCards } from './QuestionCards.js';
+import { AttachBar } from './AttachBar.js';
+import type { ExtractInput } from '../engine/extract.js';
 
 interface Props {
   /** 상의 브리핑에 실을 맥락 — 질문만 내보내면 상대 AI가 일반론으로 답한다 */
@@ -25,6 +27,11 @@ interface Props {
   /** 지금 문서를 뺀 보관함의 문서 수. 0이면 "기존 문서 열기"를 띄울 이유가 없다 */
   otherDocCount: number;
   onOpenLibrary: () => void;
+  /** FR-015 자료 첨부 — 읽는 중인 파일명, 형식·크기 거부 문구 */
+  reading: string | null;
+  refusal: string | null;
+  onAttach: (input: ExtractInput) => void;
+  onRefuse: (message: string | null) => void;
   onDismissError: () => void;
   onUnlock: (id: SectionId) => void;
 }
@@ -64,6 +71,13 @@ export function ChatPanel(p: Props) {
   }
 
   const lockedRejects = p.rejected.filter((r) => r.reason === 'section_locked');
+
+  /** 입력칸에 쓰던 글이 있으면 "이 자료를 어디에 쓰라"는 메모로 함께 넘긴다. */
+  function attach(input: ExtractInput) {
+    const note = text.trim();
+    if (note) setText('');
+    p.onAttach({ ...input, note });
+  }
 
   return (
     <section className="chat">
@@ -157,6 +171,15 @@ export function ChatPanel(p: Props) {
         <div ref={endRef} />
       </div>
 
+      <AttachBar
+        state={p.state}
+        reading={p.reading}
+        refusal={p.refusal}
+        disabled={!p.hasKey || busy}
+        onPick={attach}
+        onRefuse={p.onRefuse}
+      />
+
       <div className="composer">
         <textarea
           ref={inputRef}
@@ -167,7 +190,7 @@ export function ChatPanel(p: Props) {
               : p.questions.length > 0 ? '위 질문에 답하거나, 여기에 자유롭게 적어주세요…  (⌘/Ctrl + Enter 전송)'
                 : '입력…  (⌘/Ctrl + Enter 전송)'
           }
-          disabled={!p.hasKey}
+          disabled={!p.hasKey || p.reading !== null}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }

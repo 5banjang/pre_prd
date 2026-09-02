@@ -30,6 +30,7 @@ import { renderDraft } from '../export/render.js';
 import { downloadText, slug } from '../export/download.js';
 import { Header } from './Header.js';
 import { ChatPanel } from './ChatPanel.js';
+import { extractAttachment, type ExtractInput } from '../engine/extract.js';
 import { PreviewPanel, type SectionFocus } from './PreviewPanel.js';
 import { IssuePanel } from './IssuePanel.js';
 import { ExportGate } from './ExportGate.js';
@@ -56,6 +57,9 @@ export interface AppState {
   /** FR-014 — 이번 턴의 질문 카드와 사용자의 답 */
   questions: EngineQuestion[];
   answers: AnswerMap;
+  /** FR-015 — 읽는 중인 파일명(없으면 null)과 형식·크기 거부 문구 */
+  reading: string | null;
+  refusal: string | null;
   /** 저장소에서 복구가 끝났는가. 끝나기 전에는 자동 저장하지 않는다. */
   booted: boolean;
   saved: SaveStatus;
@@ -82,6 +86,10 @@ type Action =
     }
   | { type: 'answer'; id: string; patch: { choice?: string | null; note?: string; unknown?: boolean } }
   | { type: 'mergeAnswers'; answers: AnswerMap }
+  | { type: 'readStart'; name: string }
+  | { type: 'readOk'; state: PRDState; rejected: RejectedPatch[]; inTok: number; outTok: number }
+  | { type: 'readFail'; error: EngineError }
+  | { type: 'refuse'; message: string | null }
   | { type: 'turnFail'; error: EngineError }
   | { type: 'dismissError' }
   | { type: 'setKey'; key: string }
@@ -142,6 +150,24 @@ function reducer(s: AppState, a: Action): AppState {
         inputTokens: s.inputTokens + a.inTok,
         outputTokens: s.outputTokens + a.outTok,
       };
+    // --- 자료 첨부 (FR-015) ---
+    case 'readStart':
+      return { ...s, reading: a.name, refusal: null, error: null };
+    case 'readOk':
+      return {
+        ...s,
+        reading: null,
+        prd: a.state,
+        rejected: a.rejected,
+        inputTokens: s.inputTokens + a.inTok,
+        outputTokens: s.outputTokens + a.outTok,
+      };
+    case 'readFail':
+      // 자료를 못 읽어도 진행 중인 내용은 그대로다 — §B1 AC6
+      return { ...s, reading: null, error: a.error };
+    case 'refuse':
+      return { ...s, refusal: a.message };
+
     case 'answer': {
       const cur = s.answers[a.id] ?? { choice: null, note: '' };
       return { ...s, answers: { ...s.answers, [a.id]: { ...cur, ...a.patch } } };
@@ -194,6 +220,8 @@ const initial: AppState = {
   nudged: false,
   questions: [],
   answers: {},
+  reading: null,
+  refusal: null,
   booted: false,
   saved: 'idle',
   notice: null,
@@ -440,6 +468,28 @@ export function App() {
     }
   }
 
+  /**
+   * 자료 1건을 읽어 상태에 반영한다 — FR-015.
+   * 원본은 extractAttachment 안에서만 존재하고 끝나면 사라진다. 여기서 붙잡아 두지 않는다.
+   */
+  async function attach(input: ExtractInput) {
+    if (!s.apiKey || s.reading || s.status === 'thinking') return;
+    dispatch({ type: 'readStart', name: input.name });
+
+    const r = await extractAttachment(s.prd, input, { apiKey: s.apiKey });
+    if (r.ok) {
+      dispatch({
+        type: 'readOk',
+        state: r.state,
+        rejected: r.rejected,
+        inTok: r.usage.inputTokens,
+        outTok: r.usage.outputTokens,
+      });
+    } else {
+      dispatch({ type: 'readFail', error: r.error });
+    }
+  }
+
   return (
     <div className="app">
       <Header
@@ -477,6 +527,10 @@ export function App() {
           onAnswer={(id, patch) => dispatch({ type: 'answer', id, patch })}
           onMergeAnswers={(answers) => dispatch({ type: 'mergeAnswers', answers })}
           onSend={send}
+          reading={s.reading}
+          refusal={s.refusal}
+          onAttach={(input) => { void attach(input); }}
+          onRefuse={(message) => dispatch({ type: 'refuse', message })}
           otherDocCount={s.docs.filter((d) => d.id !== s.docId).length}
           onOpenLibrary={() => { void refreshDocs(); setLibOpen(true); }}
           onDismissError={() => dispatch({ type: 'dismissError' })}
