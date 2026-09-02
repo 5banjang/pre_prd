@@ -65,6 +65,16 @@
   (2) 이 설계에서는 불필요하다고 판단하고 제거한 뒤 §11 항목에 사유를 남긴다
   **빌더 결정 사항.**
 
+### 결함 7 — 빌드본이 백지로 뜬다 (배포 직전에 터질 뻔한 것)
+- 증상: `npm run build` 후 `vite preview`로 열면 **아무것도 안 나온다.** 콘솔 오류도 없다.
+- 원인: `vite.config.ts`의 `base`가 `command === 'build'`일 때만 `/pre_prd/`였다.
+  `vite preview`는 command가 `'serve'`라 base가 `/`가 되고, 빌드된 index.html이 찾는
+  `/pre_prd/assets/…`는 SPA 폴백으로 **index.html(text/html)을 돌려받는다.**
+  모듈이 로드되지 못하니 React가 아예 안 뜨고, 스크립트 오류도 안 남는다.
+- 수정: `base: command === 'build' || isPreview ? '/pre_prd/' : '/'`
+- 확인: 수정 후 빌드본이 정상 렌더. 첫 방문 화면(시작 3갈래 + API 키 안내)까지 확인.
+- 교훈: **개발 서버가 도는 것과 배포본이 도는 것은 다른 사실이다.** 배포 전에 빌드본을 연다.
+
 ## 정상 확인된 것 (자료 첨부 · FR-015)
 - 실제 파일(761바이트 메모) 1건으로 8개 섹션이 `drafting`으로 전환, 가정 2건·미검증 3건 등록
 - `inline_data { mime_type, data }` 형식이 실제 API에서 동작 확인 (2026-09-02)
