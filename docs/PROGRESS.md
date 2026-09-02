@@ -36,23 +36,20 @@ src/storage/persist.ts            KV 인터페이스 + migrate() + 키 저장 (F
 src/storage/library.ts            보관함 — 목록·판본·백업 (FR-016)
 src/export/render.ts              상태 → 마크다운 조립 (FR-008/009/013)
 src/export/download.ts            Blob 저장 공용 경로
-```
-
 
 src/config.ts                     모델·단가·튜닝 값 단일 출처
 src/types/prd.ts                  §4 타입 + 섹션 정의 + 빈 상태 팩토리
 src/validator/vendorDict.ts       §6.3 벤더 사전 + 미태깅 탐지
-src/validator/validate.ts         §6.1 차단 10 + §6.4 경고 3 + canExport()
-src/validator/validate.test.ts    41 tests
+src/validator/validate.ts         §6.1 미완성 10 + §6.4 경고 3 + completeness()
 src/engine/patch.ts               §5.2 패치 타입 + 런타임 검사 (LLM 출력은 불신)
 src/engine/applyPatches.ts        FR-003 적용 엔진 + editSection/unlockSection
-src/engine/applyPatches.test.ts   24 tests
 src/engine/systemPrompt.ts        §5.2 엔진 지침 + 스키마 위반 재요청 문구
 src/engine/prompt.ts              §5.1 조립 — 상태 JSON + 최근 6턴 + 입력
 src/engine/geminiAdapter.ts       responseSchema + 호출 + 벤더형식→정규 Patch[]
 src/engine/callEngine.ts          재시도 격리 + runTurn(한 턴 왕복)
-src/engine/callEngine.test.ts     24 tests (가짜 fetch)
-src/engine/live.smoke.test.ts     실제 API 연기 테스트 (GOOGLE_API_KEY 있을 때만)
+
+테스트 214개 — validate 58 · persist 33 · render 31 · library 28 ·
+applyPatches 24 · callEngine 24 · question 16. live.smoke(1)는 GOOGLE_API_KEY 있을 때만.
 ```
 
 실제 호출은 `GOOGLE_API_KEY=... npx vitest run live.smoke` 로 돌린다.
