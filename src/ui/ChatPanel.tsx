@@ -8,6 +8,7 @@ import type { RejectedPatch } from '../engine/applyPatches.js';
 import { answeredCount, composeAnswer, type AnswerMap, type EngineQuestion } from '../engine/question.js';
 import { QuestionCards } from './QuestionCards.js';
 import { AttachBar } from './AttachBar.js';
+import { ACCEPT_ATTR, classifyFile } from '../engine/attachment.js';
 import type { ExtractInput } from '../engine/extract.js';
 
 interface Props {
@@ -52,6 +53,7 @@ export function ChatPanel(p: Props) {
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,12 +74,27 @@ export function ChatPanel(p: Props) {
 
   const lockedRejects = p.rejected.filter((r) => r.reason === 'section_locked');
 
-  /** 입력칸에 쓰던 글이 있으면 "이 자료를 어디에 쓰라"는 메모로 함께 넘긴다. */
-  function attach(input: ExtractInput) {
+  /**
+   * 고른 파일을 **보내기 전에** 검사한다 — §B1 AC5.
+   * 입력칸에 쓰던 글이 있으면 "이 자료를 어디에 쓰라"는 메모로 함께 넘긴다.
+   */
+  function chooseFile(file: File | undefined) {
+    if (!file) return;
+    const check = classifyFile(file);
+    if (!check.ok) {
+      p.onRefuse(check.message);
+      return;
+    }
+    p.onRefuse(null);
     const note = text.trim();
     if (note) setText('');
-    p.onAttach({ ...input, note });
+    p.onAttach({
+      kind: check.kind, mimeType: check.mimeType,
+      name: file.name, bytes: file.size, file, note,
+    });
   }
+
+  const openPicker = () => fileRef.current?.click();
 
   return (
     <section className="chat">
@@ -92,6 +109,14 @@ export function ChatPanel(p: Props) {
                 <span>
                   한 줄짜리 아이디어면 됩니다. 엔진이 예산·만들 것·안 만들 것부터 취조합니다.
                   모르는 건 <b>모르겠어요</b>를 눌러 넘겨도 됩니다.
+                </span>
+              </button>
+
+              <button className="start-card" onClick={openPicker} disabled={!p.hasKey}>
+                <strong>자료를 넣고 시작</strong>
+                <span>
+                  기획 메모·회의 녹음이 이미 있다면 그것부터 읽힙니다.
+                  한 번 읽어 항목을 채우고 원본은 버립니다.
                 </span>
               </button>
 
@@ -171,12 +196,23 @@ export function ChatPanel(p: Props) {
         <div ref={endRef} />
       </div>
 
+      <input
+        ref={fileRef}
+        type="file"
+        accept={ACCEPT_ATTR}
+        hidden
+        onChange={(e) => {
+          chooseFile(e.target.files?.[0]);
+          e.target.value = '';      // 같은 파일을 다시 골라도 이벤트가 오게 비운다
+        }}
+      />
+
       <AttachBar
         state={p.state}
         reading={p.reading}
         refusal={p.refusal}
         disabled={!p.hasKey || busy}
-        onPick={attach}
+        onOpenPicker={openPicker}
         onRefuse={p.onRefuse}
       />
 

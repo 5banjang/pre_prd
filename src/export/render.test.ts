@@ -9,6 +9,7 @@ import {
   renderDraftBanner,
   renderFullPRD,
   renderSetupGuide,
+  renderUndecided,
 } from './render.js';
 import { createEmptyState, type PRDState, type Requirement } from '../types/prd.js';
 import type { ValidationIssue } from '../validator/validate.js';
@@ -280,5 +281,19 @@ describe('읽어들인 자료 — FR-015', () => {
   it('자료가 없으면 그 절은 나오지 않는다', () => {
     const s = createEmptyState('빈 문서');
     expect(renderDraft(s, [])).not.toContain('읽어들인 자료');
+  });
+});
+
+describe('압축본 중복 — 실측 발견', () => {
+  it('[미검증] 목록이 두 번 실리지 않는다', () => {
+    const s = createEmptyState('중복 확인');
+    s.unverifiedTerms = ['Dexie.js', 'JSZip'];
+    s.requirements = [{
+      id: 'FR-001', title: '기능', description: '설명',
+      acceptanceCriteria: ['조건 시 저장된다', '3초 이내'],
+      priority: 'Must', dependsOn: [], section: 'FR',
+    }];
+    const artifact = `${renderCompact(s)}\n\n${renderUndecided(s, [])}\n`;
+    expect(artifact.split('Dexie.js')).toHaveLength(2);   // 딱 한 번만 등장
   });
 });

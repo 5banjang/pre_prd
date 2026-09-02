@@ -227,11 +227,8 @@ function compactBody(state: PRDState, onlyMust: boolean): string {
     lines.push('');
   }
 
-  if (state.unverifiedTerms.length > 0) {
-    lines.push('## [미검증] — 착수 전 확인 필요', '');
-    lines.push(...state.unverifiedTerms.map((t) => `- ${t}`));
-  }
-
+  // [미검증] 목록은 여기 넣지 않는다. 압축본 산출물은 뒤에 renderUndecided를 붙이는데
+  // 거기 이미 같은 목록이 있다. 실측(2026-09-02): 같은 7건이 문서에 두 번 실렸다.
   return lines.join('\n');
 }
 

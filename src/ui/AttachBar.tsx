@@ -4,11 +4,12 @@
 // 통과한 것만 읽기로 넘긴다. 거부 문구에는 한도를 숫자로 넣는다 (§B1 AC5).
 //
 // 입력칸에 쓰던 글은 "이 자료를 어디에 쓰라"는 메모로 함께 넘어간다.
+//
+// 파일 입력 자체는 ChatPanel이 들고 있다 — 시작 화면의 "자료로 시작" 갈래도
+// 같은 것을 열어야 하는데, 입력이 둘이면 두 벌을 관리하게 된다.
 
-import { useRef } from 'react';
 import type { PRDState } from '../types/prd.js';
-import { ACCEPT_ATTR, MAX_ATTACHMENT_MB, classifyFile } from '../engine/attachment.js';
-import type { ExtractInput } from '../engine/extract.js';
+import { MAX_ATTACHMENT_MB } from '../engine/attachment.js';
 
 interface Props {
   state: PRDState;
@@ -17,49 +18,20 @@ interface Props {
   /** 형식·크기 거부 문구. 사용자가 고칠 수 있는 내용이므로 그대로 보여준다. */
   refusal: string | null;
   disabled: boolean;
-  onPick: (input: ExtractInput) => void;
+  onOpenPicker: () => void;
   onRefuse: (message: string | null) => void;
 }
 
 export function AttachBar(p: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const count = p.state.attachments.length;
-
-  function choose(file: File | undefined) {
-    if (!file) return;
-    const check = classifyFile(file);
-    if (!check.ok) {
-      p.onRefuse(check.message);
-      return;
-    }
-    p.onRefuse(null);
-    p.onPick({
-      kind: check.kind,
-      mimeType: check.mimeType,
-      name: file.name,
-      bytes: file.size,
-      file,
-    });
-  }
 
   return (
     <div className="attach">
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPT_ATTR}
-        hidden
-        onChange={(e) => {
-          choose(e.target.files?.[0]);
-          e.target.value = '';      // 같은 파일을 다시 골라도 이벤트가 오게 비운다
-        }}
-      />
-
       <button
         type="button"
         className="ghost attach-btn"
         disabled={p.disabled || p.reading !== null}
-        onClick={() => inputRef.current?.click()}
+        onClick={p.onOpenPicker}
       >
         {p.reading ? `${p.reading} 읽는 중…` : '자료 첨부'}
       </button>
