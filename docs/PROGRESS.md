@@ -5,16 +5,19 @@
 
 ## 현재 위치
 
-**M1~M6 완료.** 테스트 **214개** 통과, `tsc --noEmit` 클린. 브라우저에서 새로고침 복구 확인.
+**M1~M6 완료.** 테스트 **259개** 통과, `tsc --noEmit` 클린, `npm run build` 클린.
+브라우저에서 새로고침 복구 · 판본 찍기 · 산출물 선택 다운로드 실측 확인.
 
-**개정안 #02 진행 중** (`docs/SPEC-amendment-02.md` §E 표에 항목별 구현 현황).
-E1(원칙 4 개정)·E2(점검 화면)·E4(문서 보관함) 구현·커밋 완료.
-**E3(산출물 3종·선택 다운로드)·E5(자료 첨부) 미착수, E6(UI/UX) 2/5.**
+**개정안 #02 서버 불필요 항목 대부분 완료** (`docs/SPEC-amendment-02.md` §E 표에 항목별 현황).
+E1(원칙 4 개정)·E2(점검 화면)·E3(산출물 8종)·E4(문서 보관함) 구현·커밋 완료.
+**E5(자료 첨부) 미착수, E6(UI/UX) 2/5.**
 
 다음 할 일:
-1. **E3 — 산출물 3종·선택 다운로드.** 앱의 최종 산출물이라 M7 검증의 전제다.
-2. **M7(실사용 검증)** — 이 앱으로 이 앱을 다시 기획한다. 30턴 이상 돌려 컨텍스트 유실과 검증기 오탐을 잡는다.
+1. **M7(실사용 검증)** — 이 앱으로 이 앱을 다시 기획한다. 30턴 이상 돌려 컨텍스트 유실과
+   검증기 오탐을 잡는다. 이제 산출물이 다 나오므로 검증의 전제가 갖춰졌다.
+2. E6 나머지 3건(모르겠어요 버튼 · 시작 화면 · S0 완화) — M7에서 실제로 걸리는 것부터.
 3. E5(자료 첨부)는 그 다음. 없어도 앱은 성립한다.
+4. E7~E10(계정·결제)은 **확정 제약 변경**이라 빌더 승인 없이 착수 불가.
 
 실행: `npm run dev` → http://localhost:5173
 
@@ -35,6 +38,10 @@ src/ui/QuestionCards.tsx          객관식 질문 카드 (FR-014)
 src/storage/persist.ts            KV 인터페이스 + migrate() + 키 저장 (FR-010)
 src/storage/library.ts            보관함 — 목록·판본·백업 (FR-016)
 src/export/render.ts              상태 → 마크다운 조립 (FR-008/009/013)
+src/export/artifacts.ts           산출물 8종 카탈로그 — UI는 이 배열만 안다
+src/export/html.ts                PRD.html · overview.html (자립형, 외부 요청 0)
+src/export/markdown.ts            최소 마크다운 → HTML (이스케이프 먼저)
+src/export/zip.ts                 무압축 ZIP 작성기 (의존성 없이)
 src/export/download.ts            Blob 저장 공용 경로
 
 src/config.ts                     모델·단가·튜닝 값 단일 출처
@@ -48,8 +55,9 @@ src/engine/prompt.ts              §5.1 조립 — 상태 JSON + 최근 6턴 + �
 src/engine/geminiAdapter.ts       responseSchema + 호출 + 벤더형식→정규 Patch[]
 src/engine/callEngine.ts          재시도 격리 + runTurn(한 턴 왕복)
 
-테스트 214개 — validate 58 · persist 33 · render 31 · library 28 ·
-applyPatches 24 · callEngine 24 · question 16. live.smoke(1)는 GOOGLE_API_KEY 있을 때만.
+테스트 259개 — validate 58 · persist 33 · render 31 · library 30 · artifacts 25 ·
+applyPatches 24 · callEngine 24 · question 16 · markdown 13 · zip 7.
+live.smoke(1)는 GOOGLE_API_KEY 있을 때만.
 ```
 
 실제 호출은 `GOOGLE_API_KEY=... npx vitest run live.smoke` 로 돌린다.
@@ -137,6 +145,14 @@ applyPatches 24 · callEngine 24 · question 16. live.smoke(1)는 GOOGLE_API_KEY
 | 09-02 | 판본 이력 읽기 | 목록을 열 때가 아니라 **펼칠 때** 문서 본문을 읽는다 | 스냅샷은 `PRDState` 전문이라 무겁다. 목록 렌더에 N개를 전부 읽으면 안 된다 |
 | 09-02 | `canExport()` 제거 | 표식으로 남겨뒀던 `true` 반환 함수를 삭제 | 개정안 §A는 "폐기"였다. **가부를 묻는 API가 없는 것**이 "항상 가능하다"의 가장 확실한 보장 |
 | 09-02 | 백업 덮어쓰기 | 가져오기는 **덮어쓰지 않는다.** 같은 id면 새 id로 들여온다 | 백업 복원이 현재 작업을 지우면 그것은 복원이 아니라 사고다 |
+| 09-02 | **E3 · Mermaid 배제** | 개정안 §B4의 Mermaid 제안을 쓰지 않고 **인라인 SVG**로 직접 그림 | Mermaid는 CDN 스크립트를 요구해 같은 절 AC3(외부 요청 금지)과 정면 충돌. AC가 제안보다 우선한다. `xmlns`도 빼서 산출물에 URL이 0개 |
+| 09-02 | E3 · zip 라이브러리 | 안 씀. `export/zip.ts`에 무압축 ZIP 직접 작성 | 산출물이 전부 텍스트라 압축이 무의미하고, store 방식은 헤더 3종이면 끝. 런타임 의존성 3개를 지켰다. `unzip -t`·python `zipfile`로 실측 검증 |
+| 09-02 | E3 · 마크다운 렌더링 | M4의 "보류"를 뒤집고 **최소 서브셋 렌더러**를 씀 (`react-markdown` 아님) | 화면 미리보기는 `<pre>`로 충분했지만 **인쇄용 산출물**은 목차·표가 필요하다. 문법 범위가 좁아(우리 엔진이 쓴 것) 70줄로 끝난다 |
+| 09-02 | E3 · 조판 순서 | **이스케이프 먼저, 조판 나중** | 섹션 본문은 LLM과 사용자가 쓴다. 둘 다 신뢰하지 않는다. 순서가 반대면 `<img onerror>`가 살아난다 |
+| 09-02 | E3 · zip 내부 파일명 | 프로젝트명을 빼고 표준 이름(`PRD.md` 등)만 | 개발 AI가 받는 것은 표준 이름의 폴더여야 한다. 덤으로 구형 Info-ZIP의 한글 파일명 깨짐도 피한다 |
+| 09-02 | 산출물 7종 → **8종** | 개정안 §B4 표에 압축본(`PRD-compact.md`)이 누락돼 있었다 | FR-009로 이미 있던 산출물이다. 빼면 기능 후퇴 |
+| 09-02 | 버그 · `⭳` 두부 | `⭳`(U+2B73) → `↓`(U+2193) | 시스템 폰트에 없어 브라우저에서 두부(□)로 렌더링되던 것을 실측 발견 |
+| 09-02 | 버그 · SVG 과대확대 | `width="100%"` → 자연 크기 + CSS `max-width` | 층이 적은 그래프가 컨테이너 폭까지 확대돼 글자가 거대해졌다. 실측 발견 |
 
 ## 미해결
 
@@ -144,7 +160,7 @@ applyPatches 24 · callEngine 24 · question 16. live.smoke(1)는 GOOGLE_API_KEY
 - 스펙 §13 Open Questions 중 Q1 해소, **Q2~Q5 미확정** — 해당 코드 착수 직전 사용자 확인 필요.
 - **Anthropic API 키 미확보.** 구독과 별개로 console.anthropic.com에서 발급 필요. **M3에서 처음 필요하며 M1·M2에는 지장 없음.**
 - `docs/BUILDER_CONTEXT.md`의 예산·배포·가용시간 미기입. M3 전까지 진행에 지장 없음.
-- FR-013(세팅 지침 생성)의 출력 포맷 미확정 — M6에서 결정.
+- ~~FR-013 출력 포맷 미확정~~ — E3에서 `SETUP.md`로 확정.
 - **개정안 #02 승인란이 비어 있다.** E1·E2·E4는 빌더 구두 지시로 구현됐지만 문서상 `⬜`다. 승인 후 `SPEC.md` v3.2로 병합할 것 — 지금은 문서와 코드가 어긋나 있다.
 - **E7~E10(계정·결제)는 확정 제약 변경**이라 빌더 외에 누구도 결정할 수 없다. 개정안 §D 스코프 경고 참조.
 - **`KRW_PER_USD = 1400`은 임시값** (`validate.ts`). 스펙에 원화 예산 ↔ USD 원가 비교 규정이 없다. M3에서 사용자 확인 후 config로 옮길 것.
