@@ -2,13 +2,15 @@
 // 엔진 응답의 reply만 표시한다. patches는 표시하지 않는다 (AC2).
 
 import { useEffect, useRef, useState } from 'react';
-import type { HistoryEntry, SectionId } from '../types/prd.js';
+import type { HistoryEntry, PRDState, SectionId } from '../types/prd.js';
 import type { EngineError } from '../engine/geminiAdapter.js';
 import type { RejectedPatch } from '../engine/applyPatches.js';
 import { answeredCount, composeAnswer, type AnswerMap, type EngineQuestion } from '../engine/question.js';
 import { QuestionCards } from './QuestionCards.js';
 
 interface Props {
+  /** 상의 브리핑에 실을 맥락 — 질문만 내보내면 상대 AI가 일반론으로 답한다 */
+  state: PRDState;
   history: readonly HistoryEntry[];
   status: 'idle' | 'thinking';
   error: EngineError | null;
@@ -18,6 +20,7 @@ interface Props {
   questions: readonly EngineQuestion[];
   answers: AnswerMap;
   onAnswer: (id: string, patch: { choice?: string | null; note?: string }) => void;
+  onMergeAnswers: (next: AnswerMap) => void;
   onSend: (text: string) => void;
   onDismissError: () => void;
   onUnlock: (id: SectionId) => void;
@@ -105,10 +108,12 @@ export function ChatPanel(p: Props) {
 
         {!busy && (
           <QuestionCards
+            state={p.state}
             questions={p.questions}
             answers={p.answers}
             disabled={busy}
             onChange={p.onAnswer}
+            onMerge={p.onMergeAnswers}
           />
         )}
 

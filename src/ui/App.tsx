@@ -81,6 +81,7 @@ type Action =
       inTok: number; outTok: number; questions: EngineQuestion[];
     }
   | { type: 'answer'; id: string; patch: { choice?: string | null; note?: string } }
+  | { type: 'mergeAnswers'; answers: AnswerMap }
   | { type: 'turnFail'; error: EngineError }
   | { type: 'dismissError' }
   | { type: 'setKey'; key: string }
@@ -145,6 +146,9 @@ function reducer(s: AppState, a: Action): AppState {
       const cur = s.answers[a.id] ?? { choice: null, note: '' };
       return { ...s, answers: { ...s.answers, [a.id]: { ...cur, ...a.patch } } };
     }
+    // 외부 AI에서 읽어온 답을 한꺼번에 얹는다. 합치는 규칙은 handoff.mergeAnswers가 이미 적용했다.
+    case 'mergeAnswers':
+      return { ...s, answers: a.answers };
     case 'turnFail':
       // 실패해도 진행 중 상태를 잃지 않는다 — NFR-004
       return { ...s, status: 'idle', error: a.error };
@@ -461,6 +465,7 @@ export function App() {
 
       <main className="panes">
         <ChatPanel
+          state={s.prd}
           history={s.prd.history}
           status={s.status}
           error={s.error}
@@ -470,6 +475,7 @@ export function App() {
           questions={s.questions}
           answers={s.answers}
           onAnswer={(id, patch) => dispatch({ type: 'answer', id, patch })}
+          onMergeAnswers={(answers) => dispatch({ type: 'mergeAnswers', answers })}
           onSend={send}
           onDismissError={() => dispatch({ type: 'dismissError' })}
           onUnlock={(id) => dispatch({ type: 'unlockSection', id })}

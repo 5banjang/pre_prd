@@ -2,15 +2,19 @@
 // 보기를 클릭해 답하거나, 주관식 칸에 자유롭게 부연한다.
 
 import { answeredCount, type AnswerMap, type EngineQuestion } from '../engine/question.js';
+import type { PRDState } from '../types/prd.js';
+import { ConsultBox } from './ConsultBox.js';
 
 interface Props {
+  state: PRDState;
   questions: readonly EngineQuestion[];
   answers: AnswerMap;
   disabled: boolean;
   onChange: (id: string, patch: { choice?: string | null; note?: string }) => void;
+  onMerge: (next: AnswerMap) => void;
 }
 
-export function QuestionCards({ questions, answers, disabled, onChange }: Props) {
+export function QuestionCards({ state, questions, answers, disabled, onChange, onMerge }: Props) {
   if (questions.length === 0) return null;
   const done = answeredCount(questions, answers);
 
@@ -76,6 +80,14 @@ export function QuestionCards({ questions, answers, disabled, onChange }: Props)
           </div>
         );
       })}
+
+      <ConsultBox
+        state={state}
+        questions={questions}
+        answers={answers}
+        disabled={disabled}
+        onMerge={onMerge}
+      />
     </div>
   );
 }
