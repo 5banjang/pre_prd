@@ -65,6 +65,7 @@ body {
 .settings input[type='password'] { flex: 1; min-width: 0; }
 .ok-text { color: var(--ok); }
 .err-text { color: var(--danger); }
+.warn-text { color: var(--draft); }
 
 .banner {
   display: flex; align-items: center; gap: 8px;
@@ -110,6 +111,17 @@ body {
 .notice.error { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 .notice.locked { border-color: color-mix(in srgb, var(--draft) 45%, transparent); }
 .notice.nudge { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* --- 시작 화면 (개정안 §B5-4) --- */
+.start-cards { display: grid; gap: 10px; margin: 16px 0 14px; text-align: left; }
+.start-card {
+  display: flex; flex-direction: column; gap: 5px; padding: 13px 15px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); color: inherit; font: inherit; font-weight: 400; cursor: pointer;
+}
+.start-card:hover { border-color: var(--accent); filter: none; }
+.start-card strong { font-size: 13.5px; }
+.start-card span { color: var(--dim); font-size: 12.5px; line-height: 1.55; }
 
 /* --- 질문 카드 (FR-014) --- */
 .qcards { margin: 4px 0 20px; }

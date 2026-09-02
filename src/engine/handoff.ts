@@ -131,6 +131,9 @@ const HEAD = /^\s*[-*>#\s]*(?:q|Q|질문\s*)?(\d{1,2})\s*(?:번)?\s*(?:의견|�
 /** 줄 앞머리의 목록 기호·인용 부호를 걷어낸다. */
 const stripLead = (s: string) => s.replace(/^\s*[->*•·]+\s*/, '').trim();
 
+/** 비교용 정규화 — 공백·문장부호 차이로 같은 말을 다르게 보지 않는다. */
+const norm = (s: string) => s.replace(/[\s.,)\]·—-]+/g, '').toLowerCase();
+
 /** `B`, `B)`, `(B)`, `선택: B`, `B) 정적 호스팅` 에서 알파벳 하나를 뽑는다. */
 function readChoice(rest: string, valid: readonly string[]): { choice: string | null; left: string } {
   const t = stripLead(rest).replace(/^(?:선택|choice)\s*[:：]\s*/i, '').trim();
@@ -185,7 +188,11 @@ export function parseConsultReply(
       } else {
         const { choice, left } = readChoice(rest, q.options.map((o) => o.key));
         if (choice) entry.choice = choice;
-        if (left) entry.notes.push(left);
+        // "Q1: B) 서버 포함" 처럼 보기 이름을 되풀이한 부분은 의견이 아니다.
+        // 선택으로 이미 담긴 말을 의견 칸에 한 번 더 넣지 않는다.
+        const label = q.options.find((o) => o.key === choice)?.label ?? '';
+        const echo = choice !== null && label !== '' && norm(label).startsWith(norm(left));
+        if (left && !echo) entry.notes.push(left);
       }
       found.set(q.id, entry);
       continue;

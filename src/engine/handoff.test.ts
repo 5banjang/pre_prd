@@ -108,9 +108,9 @@ Q3 의견: 0원
     expect(r.answers[0]!.choice).toBe('A');
   });
 
-  it('알파벳 뒤에 보기 이름을 붙여도 읽는다', () => {
+  it('알파벳 뒤에 보기 이름을 붙여도 읽는다 — 이름은 의견으로 옮기지 않는다', () => {
     const r = parseConsultReply('Q1: B) 서버 포함', QS);
-    expect(r.answers[0]).toEqual({ questionId: 'Q1', choice: 'B', note: '서버 포함' });
+    expect(r.answers[0]).toEqual({ questionId: 'Q1', choice: 'B', note: '' });
   });
 
   it('여러 표기법을 받는다 — 형식을 외우게 하지 않는다', () => {
@@ -179,5 +179,17 @@ describe('기존 답과 합치기', () => {
     const cur: AnswerMap = { Q1: { choice: 'B', note: '' } };
     mergeAnswers(cur, [{ questionId: 'Q1', choice: 'A', note: 'x' }]);
     expect(cur.Q1!.choice).toBe('B');
+  });
+});
+
+describe('보기 이름 되풀이', () => {
+  it('선택 줄의 보기 이름을 빼고 의견만 남긴다', () => {
+    const { answers } = parseConsultReply('Q1: B) 서버 포함\nQ1 의견: 크론이 필요해서', QS);
+    expect(answers[0]).toEqual({ questionId: 'Q1', choice: 'B', note: '크론이 필요해서' });
+  });
+
+  it('보기 이름이 아닌 덧말은 의견으로 살린다', () => {
+    const { answers } = parseConsultReply('Q1: B 다만 비용은 다시 보세요', QS);
+    expect(answers[0]!.note).toBe('다만 비용은 다시 보세요');
   });
 });

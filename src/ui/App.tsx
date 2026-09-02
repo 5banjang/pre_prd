@@ -477,6 +477,8 @@ export function App() {
           onAnswer={(id, patch) => dispatch({ type: 'answer', id, patch })}
           onMergeAnswers={(answers) => dispatch({ type: 'mergeAnswers', answers })}
           onSend={send}
+          otherDocCount={s.docs.filter((d) => d.id !== s.docId).length}
+          onOpenLibrary={() => { void refreshDocs(); setLibOpen(true); }}
           onDismissError={() => dispatch({ type: 'dismissError' })}
           onUnlock={(id) => dispatch({ type: 'unlockSection', id })}
         />

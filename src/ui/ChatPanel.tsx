@@ -22,6 +22,9 @@ interface Props {
   onAnswer: (id: string, patch: { choice?: string | null; note?: string }) => void;
   onMergeAnswers: (next: AnswerMap) => void;
   onSend: (text: string) => void;
+  /** 지금 문서를 뺀 보관함의 문서 수. 0이면 "기존 문서 열기"를 띄울 이유가 없다 */
+  otherDocCount: number;
+  onOpenLibrary: () => void;
   onDismissError: () => void;
   onUnlock: (id: SectionId) => void;
 }
@@ -41,6 +44,7 @@ function errorHint(kind: EngineError['kind']): string {
 export function ChatPanel(p: Props) {
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,11 +70,30 @@ export function ChatPanel(p: Props) {
       <div className="messages">
         {p.history.length === 0 && (
           <div className="intro">
-            <h2>아이디어를 한 줄로 적어보세요.</h2>
-            <p>
-              엔진이 취조를 시작합니다. 먼저 예산·보유 API 키·배포 환경부터 확정한 뒤
-              기능 논의로 넘어갑니다.
-            </p>
+            <h2>무엇부터 할까요?</h2>
+
+            <div className="start-cards">
+              <button className="start-card" onClick={() => inputRef.current?.focus()}>
+                <strong>백지에서 시작</strong>
+                <span>
+                  한 줄짜리 아이디어면 됩니다. 엔진이 예산·만들 것·안 만들 것부터 취조합니다.
+                  모르는 건 <b>모르겠어요</b>를 눌러 넘겨도 됩니다.
+                </span>
+              </button>
+
+              {p.otherDocCount > 0 && (
+                <button className="start-card" onClick={p.onOpenLibrary}>
+                  <strong>기존 문서 열기 <span className="dim">{p.otherDocCount}</span></strong>
+                  <span>하던 인터뷰를 이어가거나, 지난 판본의 산출물을 다시 받습니다.</span>
+                </button>
+              )}
+            </div>
+
+            {!p.hasKey && (
+              <p className="hint warn-text">
+                아직 API 키가 없습니다. 오른쪽 위 <b>⚙ 설정</b>에서 넣어주세요. 키는 이 브라우저에만 저장됩니다.
+              </p>
+            )}
             <p className="hint">
               모든 데이터는 이 브라우저에만 저장됩니다. 서버로 전송되지 않습니다.
             </p>
@@ -136,6 +159,7 @@ export function ChatPanel(p: Props) {
 
       <div className="composer">
         <textarea
+          ref={inputRef}
           value={text}
           rows={3}
           placeholder={
