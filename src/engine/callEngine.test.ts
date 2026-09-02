@@ -216,9 +216,11 @@ describe('toPatches', () => {
       addUnverified: ['GPT-4'],
       addCostLines: [{ item: 'i', unit: 'u', estimatedCost: 1, verified: true, note: '' }],
       addRequirements: [{ id: 'FR-001', title: 't', description: 'd', acceptanceCriteria: ['a', 'b'], priority: 'Must', dependsOn: [], section: 'FR' }],
+      addAssumptions: [{ text: '배포는 정적 호스팅으로 가정', source: 'default' }],
     });
     expect(patches.map((p) => p.op)).toEqual([
-      'set_section', 'add_requirement', 'add_open_question', 'add_cost_line', 'add_unverified',
+      'set_section', 'add_requirement', 'add_open_question', 'add_cost_line',
+      'add_assumption', 'add_unverified',
     ]);
   });
 

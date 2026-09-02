@@ -50,6 +50,7 @@ export function applyPatches(
   const requirements = [...state.requirements];
   const openQuestions = [...state.openQuestions];
   const costModel = [...state.costModel];
+  const assumptions = [...state.assumptions];
   const unverifiedTerms = [...state.unverifiedTerms];
 
   const reject = (r: RejectedPatch) => {
@@ -141,6 +142,16 @@ export function applyPatches(
         break;
       }
 
+      case 'add_assumption': {
+        const text = patch.assumption.text.trim();
+        // 같은 가정을 두 번 적지 않는다. 출처가 달라도 문장이 같으면 같은 가정이다.
+        if (!assumptions.some((a) => a.text === text)) {
+          assumptions.push({ ...patch.assumption, text });
+        }
+        applied += 1;
+        break;
+      }
+
       case 'add_unverified': {
         const term = patch.term.trim();
         if (!unverifiedTerms.includes(term)) unverifiedTerms.push(term);
@@ -151,7 +162,7 @@ export function applyPatches(
   }
 
   return {
-    state: { ...state, sections, requirements, openQuestions, costModel, unverifiedTerms },
+    state: { ...state, sections, requirements, openQuestions, costModel, assumptions, unverifiedTerms },
     applied,
     rejected,
   };

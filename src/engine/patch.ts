@@ -3,7 +3,10 @@
 // LLM은 PRD 전문을 재생성하지 않는다. "어느 섹션을 어떻게 갱신할지"의 연산 목록만 반환한다.
 // 여기 정의는 신뢰할 수 없는 입력(LLM 출력)을 다루므로 런타임 검사를 함께 둔다.
 
-import { SECTION_IDS, type CostLine, type Requirement, type SectionId, type SectionStatus } from '../types/prd.js';
+import {
+  SECTION_IDS,
+  type Assumption, type CostLine, type Requirement, type SectionId, type SectionStatus,
+} from '../types/prd.js';
 
 export interface SetSectionPatch {
   op: 'set_section';
@@ -27,6 +30,15 @@ export interface AddCostLinePatch {
   line: CostLine;
 }
 
+/**
+ * 사용자가 "모르겠어요"를 눌러 엔진이 대신 정한 값 — 개정안 #02 §B5-2.
+ * 진행은 뚫리되 **무엇을 앱이 정했는지 문서에 남는다.**
+ */
+export interface AddAssumptionPatch {
+  op: 'add_assumption';
+  assumption: Assumption;
+}
+
 export interface AddUnverifiedPatch {
   op: 'add_unverified';
   term: string;
@@ -37,6 +49,7 @@ export type Patch =
   | AddRequirementPatch
   | AddOpenQuestionPatch
   | AddCostLinePatch
+  | AddAssumptionPatch
   | AddUnverifiedPatch;
 
 // --- 런타임 검사 ------------------------------------------------------------
@@ -44,6 +57,7 @@ export type Patch =
 const SECTION_ID_SET = new Set<string>(SECTION_IDS);
 const STATUSES = new Set<string>(['empty', 'drafting', 'confirmed']);
 const PRIORITIES = new Set<string>(['Must', 'Should', 'Could']);
+const ASSUMPTION_SOURCES = new Set<string>(['user', 'default', 'inferred']);
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -81,6 +95,14 @@ export function isCostLine(v: unknown): v is CostLine {
   );
 }
 
+export function isAssumption(v: unknown): v is Assumption {
+  if (!isRecord(v)) return false;
+  return (
+    typeof v.text === 'string' && v.text.trim().length > 0 &&
+    typeof v.source === 'string' && ASSUMPTION_SOURCES.has(v.source)
+  );
+}
+
 /** 알 수 없는 op이나 형식 위반은 여기서 걸러진다. 앱이 죽지 않는다 — FR-003. */
 export function isPatch(v: unknown): v is Patch {
   if (!isRecord(v)) return false;
@@ -94,6 +116,8 @@ export function isPatch(v: unknown): v is Patch {
       return typeof v.text === 'string' && v.text.trim().length > 0;
     case 'add_cost_line':
       return isCostLine(v.line);
+    case 'add_assumption':
+      return isAssumption(v.assumption);
     case 'add_unverified':
       return typeof v.term === 'string' && v.term.trim().length > 0;
     default:

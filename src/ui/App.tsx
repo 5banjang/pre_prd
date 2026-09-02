@@ -80,7 +80,7 @@ type Action =
       type: 'turnOk'; state: PRDState; rejected: RejectedPatch[];
       inTok: number; outTok: number; questions: EngineQuestion[];
     }
-  | { type: 'answer'; id: string; patch: { choice?: string | null; note?: string } }
+  | { type: 'answer'; id: string; patch: { choice?: string | null; note?: string; unknown?: boolean } }
   | { type: 'mergeAnswers'; answers: AnswerMap }
   | { type: 'turnFail'; error: EngineError }
   | { type: 'dismissError' }

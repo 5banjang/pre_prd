@@ -123,6 +123,18 @@ export const RESPONSE_SCHEMA = {
       },
     },
     addOpenQuestions: { type: 'ARRAY', items: { type: 'STRING' } },
+    // §B5-2 — "모르겠어요"로 엔진이 대신 정한 값의 기록
+    addAssumptions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          text: { type: 'STRING' },
+          source: { type: 'STRING', enum: ['user', 'default', 'inferred'] },
+        },
+        required: ['text', 'source'],
+      },
+    },
     addUnverified: { type: 'ARRAY', items: { type: 'STRING' } },
     // FR-014 — 객관식 질문 카드. 최대 3개.
     questions: {
@@ -185,6 +197,9 @@ export function toPatches(parsed: Record<string, unknown>): Patch[] {
   }
   for (const l of arr('addCostLines')) {
     patches.push({ op: 'add_cost_line', line: l as never });
+  }
+  for (const a of arr('addAssumptions')) {
+    patches.push({ op: 'add_assumption', assumption: a as never });
   }
   for (const t of arr('addUnverified')) {
     if (typeof t === 'string') patches.push({ op: 'add_unverified', term: t });

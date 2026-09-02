@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   answeredCount,
   composeAnswer,
+  isAnswered,
   unansweredQuestions,
   type AnswerMap,
   type EngineQuestion,
@@ -144,5 +145,25 @@ describe('toQuestions — 엔진 응답 파싱', () => {
       }],
     });
     expect(qs[0]!.options.map((o) => o.key)).toEqual(['A', 'B']);
+  });
+});
+
+describe('모르겠어요 — §B5-2', () => {
+  const dunno: AnswerMap = { Q1: { choice: null, note: '', unknown: true } };
+
+  it('답한 것으로 센다 — 진행을 막지 않는다', () => {
+    expect(isAnswered(dunno.Q1)).toBe(true);
+    expect(answeredCount(QS, dunno)).toBe(1);
+    expect(unansweredQuestions(QS, dunno).map((q) => q.id)).not.toContain('Q1');
+  });
+
+  it('결정권을 엔진에 넘기는 문장을 싣는다', () => {
+    const text = composeAnswer(QS, dunno);
+    expect(text).toContain('모르겠습니다');
+    expect(text).toContain('가정으로 기록');
+  });
+
+  it('빈 답과는 다르다 — 아무것도 없는 답은 여전히 안 보낸다', () => {
+    expect(composeAnswer(QS, { Q1: { choice: null, note: '' } })).toBe('');
   });
 });

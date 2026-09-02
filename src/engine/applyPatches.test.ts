@@ -243,3 +243,42 @@ describe('사용자 문구와 진단 분리', () => {
     expect(r.rejected[0]!.sectionId).toBe('S7');
   });
 });
+
+describe('가정 기록 — §B5-2 "모르겠어요"', () => {
+  const base = baseState();
+
+  it('엔진이 대신 정한 값을 가정으로 남긴다', () => {
+    const r = applyPatches(base, [
+      { op: 'add_assumption', assumption: { text: '배포는 정적 호스팅으로 가정', source: 'default' } },
+    ], collect());
+    expect(r.applied).toBe(1);
+    expect(r.state.assumptions).toEqual([{ text: '배포는 정적 호스팅으로 가정', source: 'default' }]);
+  });
+
+  it('같은 문장은 두 번 쌓이지 않는다', () => {
+    const r = applyPatches(base, [
+      { op: 'add_assumption', assumption: { text: '월 예산 5만원으로 가정', source: 'default' } },
+      { op: 'add_assumption', assumption: { text: ' 월 예산 5만원으로 가정 ', source: 'inferred' } },
+    ], collect());
+    expect(r.state.assumptions).toHaveLength(1);
+  });
+
+  it('출처가 규약 밖이거나 본문이 비면 버린다 — LLM 출력은 신뢰하지 않는다', () => {
+    const c = collect();
+    const r = applyPatches(base, [
+      { op: 'add_assumption', assumption: { text: '뭔가', source: 'guess' } },
+      { op: 'add_assumption', assumption: { text: '   ', source: 'default' } },
+    ], c);
+    expect(r.applied).toBe(0);
+    expect(r.state.assumptions).toEqual([]);
+    expect(r.rejected).toHaveLength(2);
+  });
+
+  it('입력 상태를 변형하지 않는다', () => {
+    const before = baseState();
+    applyPatches(before, [
+      { op: 'add_assumption', assumption: { text: '가정 하나', source: 'default' } },
+    ], collect());
+    expect(before.assumptions).toEqual([]);
+  });
+});

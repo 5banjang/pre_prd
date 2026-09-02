@@ -26,16 +26,23 @@ export interface QuestionAnswer {
   choice: string | null;
   /** 부연 의견. 없으면 빈 문자열 */
   note: string;
+  /**
+   * "모르겠어요 — 네가 정해줘"를 눌렀다 — 개정안 #02 §B5-2.
+   * 엔진이 기본값을 정하고 그것을 가정·미해결 질문으로 기록한다. 진행은 뚫리고 기록은 남는다.
+   */
+  unknown?: boolean;
 }
 
 export type AnswerMap = Record<string, QuestionAnswer>;
 
-/** 답한 질문 수 — "n/3 완료" 표시용. 선택이나 주관식 중 하나라도 있으면 답한 것으로 본다. */
+/** 이 질문에 어떤 형태로든 답했는가. "모르겠어요"도 답이다 — 진행을 막지 않는다. */
+export function isAnswered(a: QuestionAnswer | undefined): boolean {
+  return !!a && (a.choice !== null || a.note.trim().length > 0 || a.unknown === true);
+}
+
+/** 답한 질문 수 — "n/3 완료" 표시용. */
 export function answeredCount(questions: readonly EngineQuestion[], answers: AnswerMap): number {
-  return questions.filter((q) => {
-    const a = answers[q.id];
-    return !!a && (a.choice !== null || a.note.trim().length > 0);
-  }).length;
+  return questions.filter((q) => isAnswered(answers[q.id])).length;
 }
 
 /**
@@ -51,9 +58,13 @@ export function composeAnswer(
 
   for (const q of questions) {
     const a = answers[q.id];
-    if (!a || (a.choice === null && a.note.trim() === '')) continue;
+    if (!a || !isAnswered(a)) continue;
 
     const lines = [`${q.id}. ${q.text}`];
+    if (a.unknown) {
+      // 엔진에게 결정권을 넘긴다. 시스템 지침의 "모르겠음 처리"가 받는다.
+      lines.push('→ 모르겠습니다. 합리적인 기본값을 정하고, 무엇을 정했는지 가정으로 기록해 주세요.');
+    }
     if (a.choice !== null) {
       const opt = q.options.find((o) => o.key === a.choice);
       lines.push(`→ 선택: ${opt ? `${opt.key}) ${opt.label}` : a.choice}`);
@@ -74,8 +85,5 @@ export function unansweredQuestions(
   questions: readonly EngineQuestion[],
   answers: AnswerMap,
 ): EngineQuestion[] {
-  return questions.filter((q) => {
-    const a = answers[q.id];
-    return !a || (a.choice === null && a.note.trim() === '');
-  });
+  return questions.filter((q) => !isAnswered(answers[q.id]));
 }

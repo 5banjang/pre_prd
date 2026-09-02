@@ -165,6 +165,19 @@ body {
 }
 .qopt-detail { color: var(--dim); font-size: 12.5px; line-height: 1.55; }
 
+.qcard.dunno { background: color-mix(in srgb, var(--draft) 7%, var(--panel)); }
+.qskip { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.dunno-btn {
+  padding: 6px 11px; font-size: 12px; font-weight: 400;
+  background: none; border: 1px dashed var(--line); color: var(--dim);
+}
+.dunno-btn:hover:not(:disabled) { border-color: var(--draft); color: var(--draft); }
+.dunno-btn.on {
+  border-style: solid; border-color: var(--draft); color: var(--draft);
+  background: color-mix(in srgb, var(--draft) 12%, transparent);
+}
+.qskip .hint { margin: 0; }
+
 /* --- 다른 AI와 상의하기 --- */
 .consult {
   padding: 12px 14px; border: 1px solid var(--line); border-top: 0;
