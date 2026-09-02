@@ -38,6 +38,7 @@ src/ui/ExportBar.tsx              md 3종 복사·다운로드·미리보기 (FR
 src/ui/LibraryPanel.tsx           문서 목록·복제·삭제·백업·판본 이력 (FR-016)
 src/ui/Settings.tsx               BYOK 키 · JSON 내보내기/가져오기 (FR-011)
 src/ui/QuestionCards.tsx          객관식 질문 카드 (FR-014)
+src/ui/ConsultBox.tsx             다른 AI와 상의하고 오기 — 복사/붙여넣기 왕복 (FR-017)
 src/storage/persist.ts            KV 인터페이스 + migrate() + 키 저장 (FR-010)
 src/storage/library.ts            보관함 — 목록·판본·백업 (FR-016)
 src/export/render.ts              상태 → 마크다운 조립 (FR-008/009/013)
@@ -57,6 +58,7 @@ src/engine/systemPrompt.ts        §5.2 엔진 지침 + 스키마 위반 재요�
 src/engine/prompt.ts              §5.1 조립 — 상태 JSON + 최근 6턴 + 입력
 src/engine/geminiAdapter.ts       responseSchema + 호출 + 벤더형식→정규 Patch[]
 src/engine/callEngine.ts          재시도 격리 + runTurn(한 턴 왕복)
+src/engine/handoff.ts             상의 브리핑 조립 + 답변 파서 + 병합 (FR-017)
 
 테스트 259개 — validate 58 · persist 33 · render 31 · library 30 · artifacts 25 ·
 applyPatches 24 · callEngine 24 · question 16 · markdown 13 · zip 7.
@@ -161,6 +163,11 @@ live.smoke(1)는 GOOGLE_API_KEY 있을 때만.
 | 09-02 | 검증 메시지에서 섹션 이름 제거 | 메시지는 문제만 말하고, 이름은 UI 칩·산출물 굵은 글씨가 붙인다 | 안 그러면 "예외와 실패 상황 · 예외와 실패 상황: 아직…"으로 두 번 나온다. 실측 발견 |
 | 09-02 | 사용자 문구 ↔ 진단 분리 | `RejectedPatch.message`(화면) / `.detail`(콘솔) | `S99`·`set_sektion` 같은 값을 사용자에게 보여줄 이유가 없다. 그렇다고 지우면 원인 추적이 죽으므로 콘솔에는 남긴다 |
 | 09-02 | 규칙 코드는 `?`로 접기 | 화면엔 물음표만, 코드는 툴팁 | §B3 AC2 "규칙 코드는 부차 정보로만 보인다" |
+| 09-02 | **FR-017 신설** | 질문 카드를 맥락째 복사해 다른 AI와 상의하고, 받은 답변을 붙여넣어 카드에 채운다 | 빌더 요청. 질문은 좋은데 예산·기술 선택을 혼자 답하기 어렵다. 웹검색 연동(Out of Scope)이 아니라 **사람이 나르는 복사·붙여넣기** — 앱은 서버로 아무것도 보내지 않는다 |
+| 09-02 | FR-017 · 맥락 동봉 | 확정 섹션(항목당 400자)·요구사항 ID·`[미검증]` 목록을 브리핑에 함께 싣는다 | 질문만 던지면 상대 AI가 프로젝트를 모른 채 일반론으로 답한다 |
+| 09-02 | FR-017 · 파서 관용 | `Q1:` `q1)` `1.` `질문 1` 다 받고, **모르는 번호는 조용히 버리되 무엇을 버렸는지 화면에 알린다** | 돌아온 텍스트는 다른 AI나 사람 손을 거친다. 신뢰하지 않는다 (FR-003과 같은 원칙) |
+| 09-02 | FR-017 · 자동 전송 안 함 | 읽은 답은 카드에 채워질 뿐. 전송은 사용자가 누른다 | 밖에서 온 텍스트가 곧바로 엔진으로 흘러가면 사용자가 검토할 자리가 없다 |
+| 09-02 | FR 15개 | §6.4 경고선(12개) 3개 초과 | 빌더 승인분(14개)에서 1개 추가 |
 
 ## 미해결
 
