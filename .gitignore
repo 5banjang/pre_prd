@@ -6,3 +6,6 @@ dist/
 *.local
 .DS_Store
 .claude/settings.local.json
+
+# Antigravity — 지침(AGENTS.md)은 공유하고, 개인 설정만 제외한다
+.antigravity/settings.json
