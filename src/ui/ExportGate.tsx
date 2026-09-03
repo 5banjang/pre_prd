@@ -7,15 +7,17 @@
 
 import { useRef, useState } from 'react';
 import { SECTION_DEFS, type PRDState, type SectionId } from '../types/prd.js';
-import { explain } from '../validator/explain.js';
+import { explain, plainExcerpt } from '../validator/explain.js';
 import type { ValidationIssue } from '../validator/validate.js';
 import { ExportBar } from './ExportBar.js';
 
 interface Props {
   state: PRDState;
   issues: readonly ValidationIssue[];
-  /** [지금 작성] — 해당 섹션을 펼치고 스크롤한다. 모달은 닫힌다. */
+  /** [직접 쓰기] — 해당 섹션을 펼치고 스크롤한다. 모달은 닫힌다. */
   onJump: (id: SectionId) => void;
+  /** [미검증] 붙여주기 — 앱이 대신 표시를 넣는다. 없으면 버튼이 안 나온다. */
+  onTagUnverified?: (issue: ValidationIssue) => void;
   /**
    * 산출물을 처음 받아간 순간 한 번만 불린다 — 지금 판본을 스냅샷으로 굳히고
    * 작업본의 버전을 올린다 (§B2 AC3).
@@ -31,7 +33,7 @@ function keyOf(i: ValidationIssue): string {
   return `${i.code}:${i.sectionId ?? '-'}`;
 }
 
-export function ExportGate({ state, issues, onJump, onExported, onClose }: Props) {
+export function ExportGate({ state, issues, onJump, onTagUnverified, onExported, onClose }: Props) {
   const [phase, setPhase] = useState<'check' | 'download'>('check');
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
   // 이 게이트를 여는 동안 판본은 하나다. 파일을 몇 개 받든 한 번만 찍는다.
@@ -86,20 +88,20 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
           <div className="gate-body">
             {pending.length === 0 ? (
               <div className="gate-pass">
-                <p><strong>✓ 필수 항목을 전부 채웠습니다.</strong></p>
+                <p><strong>✓ 필요한 곳은 다 채우셨습니다.</strong></p>
                 {warnings.length > 0 && (
                   <p className="hint">
-                    살펴보면 좋을 곳이 {warnings.length}군데 있지만 문서를 받는 데는 지장 없습니다.
+                    한 번 봐두면 좋을 곳이 {warnings.length}군데 있지만, 문서 받는 데는 지장 없습니다.
                   </p>
                 )}
               </div>
             ) : (
               <>
                 <p className="gate-lead">
-                  아래가 아직 비어 있습니다. 지금 채우거나, 건너뛰고 문서를 받으세요.
+                  여기만 아직 안 채워졌어요. <strong>지금 채우셔도 되고, 그냥 넘어가셔도 문서는 나옵니다.</strong>
                   <br />
-                  <span className="hint">건너뛴 항목은 문서 맨 위에 <strong>미정</strong>으로 표시되어
-                  개발 AI가 임의로 채우지 않습니다.</span>
+                  <span className="hint">넘어간 항목은 문서 맨 위에 <strong>미정</strong>이라고 적어둡니다.
+                  개발 AI가 그 자리를 마음대로 채우지 않게 하려는 표시입니다.</span>
                 </p>
 
                 <ul className="gate-list">
@@ -113,16 +115,28 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
                           </span>
                           <span className="text">
                             {i.message}
+                            {/* 원문은 기호를 걷어내고 한 줄로 — 마크다운을 그대로 박으면 못 읽는다 */}
+                            {i.evidence && (
+                              <span className="evidence">“{plainExcerpt(i.evidence)}”</span>
+                            )}
                             {/* 판단 근거 — 비면 무엇이 잘못되는가. 이게 없으면 다 건너뛴다. */}
                             <span className="why">{e.why}</span>
                           </span>
                           <code className="code" title={`검증 규칙 코드: ${i.code}`}>?</code>
                         </div>
                         <div className="gate-actions">
-                          {i.sectionId && (
-                            <button onClick={() => writeNow(i)}>지금 작성</button>
+                          {/* 표시 하나 붙이는 일은 앱이 대신 한다. 손으로 고치라 하면 다 건너뛴다. */}
+                          {i.sectionId && i.evidence && onTagUnverified && (
+                            <button onClick={() => onTagUnverified(i)}>
+                              [미검증] 붙여주기
+                            </button>
                           )}
-                          <button className="ghost" onClick={() => skip(i)}>건너뛰기</button>
+                          {i.sectionId && (
+                            <button className={i.evidence ? 'ghost' : ''} onClick={() => writeNow(i)}>
+                              직접 쓰기
+                            </button>
+                          )}
+                          <button className="ghost" onClick={() => skip(i)}>나중에</button>
                         </div>
                       </li>
                     );
@@ -131,7 +145,7 @@ export function ExportGate({ state, issues, onJump, onExported, onClose }: Props
 
                 {held.length > 0 && (
                   <details className="gate-held" open>
-                    <summary>건너뛴 항목 {held.length}건 — 문서에 미정으로 남습니다</summary>
+                    <summary>나중에 하기로 한 {held.length}건 — 문서에 '미정'으로 적어둡니다</summary>
                     <ul className="gate-list held">
                       {held.map((i) => (
                         <li key={keyOf(i)}>

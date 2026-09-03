@@ -16,6 +16,14 @@ export interface ValidationIssue {
   code: string;
   message: string;
   sectionId?: SectionId;
+  /**
+   * 문제가 된 **원문 한 조각**. 메시지 안에 마크다운을 통째로 박아 넣으면
+   * 화면이 알아볼 수 없게 된다(빌더 지적 2026-09-03). 화면은 이걸 다듬어 보여주고,
+   * '한 번에 고치기'는 이 문장을 찾아 바꾼다.
+   */
+  evidence?: string;
+  /** 문제가 된 낱말 — 예: 확인 표시가 필요한 서비스명 */
+  term?: string;
 }
 
 /** 필수 섹션의 최소 분량 (스펙 §6.1 MISSING_SECTION) */
@@ -244,7 +252,9 @@ export function validate(state: PRDState): ValidationIssue[] {
         severity: 'incomplete',
         code: 'UNTAGGED_PROPER_NOUN',
         sectionId: id,
-        message: `${id}: "${hit.term}"에 [미검증] 태그나 출처가 없습니다 — "${hit.sentence}"`,
+        message: `'${hit.term}'에 대한 숫자가 사실처럼 적혀 있습니다`,
+        term: hit.term,
+        evidence: hit.sentence,
       });
     }
   }

@@ -3,6 +3,7 @@
 // 상태 표시: ● confirmed / ◐ drafting / ○ empty (스펙 §10)
 
 import { useEffect, useRef, useState } from 'react';
+import { mdToHtml } from '../export/markdown.js';
 import {
   SECTION_DEFS, SECTION_IDS, STATUS_LABEL,
   type PRDState, type Section, type SectionId,
@@ -31,15 +32,20 @@ function SectionRow(
 ) {
   const [open, setOpen] = useState(s.status !== 'empty');
   const box = useRef<HTMLDivElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(s.content);
 
   // 점검 화면에서 지목되면 펼치고 화면에 들여온다.
+  // 비어 있는 항목이면 **편집칸까지 열어준다** — 여기까지 온 사람은 쓰러 온 것이다.
   useEffect(() => {
     if (!focused) return;
     setOpen(true);
+    if (s.content.trim() === '') {
+      setDraft(s.content);
+      setEditing(true);
+    }
     box.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [focused, nonce]);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(s.content);
+  }, [focused, nonce, s.content]);
 
   function startEdit() {
     setDraft(s.content);
@@ -70,7 +76,20 @@ function SectionRow(
         <div className="section-body">
           {editing ? (
             <>
-              <textarea value={draft} rows={12} onChange={(e) => setDraft(e.target.value)} />
+              <p className="edit-guide">
+                <strong>여기엔 {SECTION_DEFS[s.id].hint}</strong>
+                <span>
+                  형식은 신경 쓰지 마세요. 그냥 문장으로 쓰셔도 되고, 여러 개를 나열할 땐
+                  줄 앞에 <code>-</code> 를 붙이면 목록이 됩니다. 굵게 쓰고 싶으면
+                  <code>**굵게**</code>. 몰라도 그대로 저장됩니다.
+                </span>
+              </p>
+              <textarea
+                value={draft}
+                rows={12}
+                placeholder={`예) - ${SECTION_DEFS[s.id].hint}`}
+                onChange={(e) => setDraft(e.target.value)}
+              />
               <div className="row">
                 <button onClick={save}>저장</button>
                 <button className="ghost" onClick={() => setEditing(false)}>취소</button>
@@ -79,14 +98,18 @@ function SectionRow(
           ) : (
             <>
               {s.content
-                ? <pre className="md">{s.content}</pre>
+                ? (
+                  // 원문(마크다운)을 그대로 뿌리면 `**`·`` ` ``가 그대로 보여 읽기 어렵다.
+                  // 우리 렌더러는 이스케이프를 먼저 하므로 사용자·엔진 글이 섞여도 안전하다.
+                  <div className="md" dangerouslySetInnerHTML={{ __html: mdToHtml(s.content) }} />
+                )
                 : (
                   <p className="section-hint">
-                    <strong>아직 비어 있습니다.</strong> {SECTION_DEFS[s.id].hint}
+                    <strong>아직 안 쓰셨어요.</strong> 여기엔 {SECTION_DEFS[s.id].hint}
                   </p>
                 )}
               <div className="row">
-                <button className="ghost" onClick={startEdit}>직접 편집</button>
+                <button className="ghost" onClick={startEdit}>여기에 직접 쓰기</button>
                 {s.locked && (
                   <button className="ghost" onClick={() => onUnlock(s.id)}>
                     잠금 해제

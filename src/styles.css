@@ -196,6 +196,40 @@ body {
 }
 .qskip .hint { margin: 0; }
 
+.evidence {
+  display: block; margin-top: 3px;
+  color: var(--dim); font-size: 12px; line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.fix-btn {
+  flex: none; align-self: start;
+  padding: 3px 9px; font-size: 11.5px; font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--draft) 50%, var(--line));
+  background: color-mix(in srgb, var(--draft) 14%, transparent);
+  color: var(--draft);
+}
+.edit-guide {
+  margin: 0 0 8px; padding: 9px 11px;
+  border-radius: var(--radius); background: var(--panel-2);
+  font-size: 12.5px; line-height: 1.6;
+}
+.edit-guide strong { display: block; margin-bottom: 3px; }
+.edit-guide span { color: var(--dim); }
+.edit-guide code {
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--panel); font-size: 11.5px;
+}
+
+/* 섹션 본문 — 마크다운을 렌더해서 보여준다 (원문 기호를 그대로 노출하지 않는다) */
+.md h1, .md h2, .md h3 { margin: 10px 0 6px; font-size: 13.5px; font-weight: 650; }
+.md p { margin: 6px 0; }
+.md ul, .md ol { margin: 6px 0; padding-left: 20px; }
+.md li { margin: 2px 0; }
+.md code { padding: 1px 5px; border-radius: 4px; background: var(--panel-2); font-size: 12px; }
+.md table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12.5px; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; }
+.md th { background: var(--panel-2); }
+
 /* --- 다른 AI와 상의하기 --- */
 .consult {
   padding: 12px 14px; border: 1px solid var(--line); border-top: 0;
@@ -267,11 +301,18 @@ body {
 .chars { color: var(--dim); font-size: 11px; }
 
 .section-body { padding: 4px 14px 14px; }
+/* 이제 원문이 아니라 렌더된 마크다운이 들어온다. 고정폭 글꼴·pre-wrap을 쓰지 않는다. */
 .md {
-  margin: 0 0 8px; padding: 10px; max-height: 320px; overflow: auto;
+  margin: 0 0 8px; padding: 10px 12px; max-height: 340px; overflow: auto;
   border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2);
-  white-space: pre-wrap; word-break: break-word;
-  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.65; word-break: break-word;
+}
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md pre {
+  margin: 6px 0; padding: 8px; overflow-x: auto;
+  border-radius: 5px; background: var(--panel);
+  font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .section-body textarea { width: 100%; resize: vertical; }
 .row { display: flex; gap: 6px; }

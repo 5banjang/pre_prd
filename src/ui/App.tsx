@@ -13,9 +13,9 @@ import { createEmptyState, type PRDState, type SectionId } from '../types/prd.js
 import { runTurn } from '../engine/callEngine.js';
 import type { EngineError } from '../engine/geminiAdapter.js';
 import type { RejectedPatch } from '../engine/applyPatches.js';
-import { editSection, unlockSection } from '../engine/applyPatches.js';
+import { editSection, tagUnverified, unlockSection } from '../engine/applyPatches.js';
 import type { AnswerMap, EngineQuestion } from '../engine/question.js';
-import { completeness, validate } from '../validator/validate.js';
+import { completeness, validate, type ValidationIssue } from '../validator/validate.js';
 import { toQuestions } from '../engine/geminiAdapter.js';
 import {
   EMPTY_SESSION, clearApiKey, idbStore, loadApiKey, saveApiKey,
@@ -90,6 +90,7 @@ type Action =
   | { type: 'readOk'; state: PRDState; rejected: RejectedPatch[]; inTok: number; outTok: number }
   | { type: 'readFail'; error: EngineError }
   | { type: 'refuse'; message: string | null }
+  | { type: 'tagUnverified'; id: SectionId; sentence: string }
   | { type: 'turnFail'; error: EngineError }
   | { type: 'dismissError' }
   | { type: 'setKey'; key: string }
@@ -167,6 +168,8 @@ function reducer(s: AppState, a: Action): AppState {
       return { ...s, reading: null, error: a.error };
     case 'refuse':
       return { ...s, refusal: a.message };
+    case 'tagUnverified':
+      return { ...s, prd: tagUnverified(s.prd, a.id, a.sentence) };
 
     case 'answer': {
       const cur = s.answers[a.id] ?? { choice: null, note: '' };
@@ -490,6 +493,12 @@ export function App() {
     }
   }
 
+  /** 점검 화면의 '붙여주기' — 문제가 된 문장에 [미검증] 표시를 앱이 대신 넣는다. */
+  function tagIssue(issue: ValidationIssue) {
+    if (!issue.sectionId || !issue.evidence) return;
+    dispatch({ type: 'tagUnverified', id: issue.sectionId, sentence: issue.evidence });
+  }
+
   return (
     <div className="app">
       <Header
@@ -549,6 +558,7 @@ export function App() {
             completeness={score}
             state={s.prd}
             onJump={jumpTo}
+            onTagUnverified={tagIssue}
             onOpenGate={() => setGateOpen(true)}
           />
         </div>
@@ -577,6 +587,7 @@ export function App() {
           state={s.prd}
           issues={issues}
           onJump={jumpTo}
+          onTagUnverified={tagIssue}
           onExported={() => { void stampVersion(); }}
           onClose={() => setGateOpen(false)}
         />

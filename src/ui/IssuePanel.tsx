@@ -4,7 +4,7 @@
 // 항목을 누르면 해당 섹션으로 데려간다. 실제 내보내기는 점검 화면(ExportGate)이 맡는다.
 
 import { SECTION_DEFS, type PRDState, type SectionId } from '../types/prd.js';
-import { explain } from '../validator/explain.js';
+import { explain, plainExcerpt } from '../validator/explain.js';
 import type { Completeness, ValidationIssue } from '../validator/validate.js';
 
 /**
@@ -13,7 +13,14 @@ import type { Completeness, ValidationIssue } from '../validator/validate.js';
  * `S7`·`MISSING_SECTION` 같은 내부 코드를 앞세우지 않는다. 사용자는 그게 뭔지 알 필요가 없다.
  * 섹션 한글 이름을 누를 수 있는 칩으로 두고, 규칙 코드는 툴팁으로 내린다.
  */
-function IssueRow({ issue, onJump }: { issue: ValidationIssue; onJump: (id: SectionId) => void }) {
+function IssueRow(
+  { issue, onJump, onTag }:
+  {
+    issue: ValidationIssue;
+    onJump: (id: SectionId) => void;
+    onTag?: (issue: ValidationIssue) => void;
+  },
+) {
   const e = explain(issue.code);
   return (
     <>
@@ -28,7 +35,16 @@ function IssueRow({ issue, onJump }: { issue: ValidationIssue; onJump: (id: Sect
           </button>
         )
         : <span className="sid" title="특정 항목이 아니라 문서 전체에 걸린 문제입니다">문서 전체</span>}
-      <span className="text" title={`${e.what} ${e.why}`}>{issue.message}</span>
+      <span className="text" title={`${e.what} ${e.why}`}>
+        {issue.message}
+        {/* 원문은 기호를 걷어내고 짧게. 마크다운 그대로면 읽을 수가 없다 */}
+        {issue.evidence && <span className="evidence">“{plainExcerpt(issue.evidence, 70)}”</span>}
+      </span>
+      {issue.evidence && onTag && (
+        <button className="fix-btn" onClick={() => onTag(issue)} title="이 문장에 [미검증] 표시를 붙입니다">
+          붙여주기
+        </button>
+      )}
       <code className="code" title={`검증 규칙 코드: ${issue.code}`}>?</code>
     </>
   );
@@ -40,9 +56,11 @@ interface Props {
   state: PRDState;
   onJump: (id: SectionId) => void;
   onOpenGate: () => void;
+  /** [미검증] 표시를 앱이 대신 붙인다. */
+  onTagUnverified?: (issue: ValidationIssue) => void;
 }
 
-export function IssuePanel({ issues, completeness, state, onJump, onOpenGate }: Props) {
+export function IssuePanel({ issues, completeness, state, onJump, onOpenGate, onTagUnverified }: Props) {
   const pending = issues.filter((i) => i.severity === 'incomplete');
   const warnings = issues.filter((i) => i.severity === 'warn');
   const done = pending.length === 0;
@@ -64,10 +82,14 @@ export function IssuePanel({ issues, completeness, state, onJump, onOpenGate }: 
 
       <ul className="issue-list">
         {pending.map((i, n) => (
-          <li key={`p${n}`} className="pending"><IssueRow issue={i} onJump={onJump} /></li>
+          <li key={`p${n}`} className="pending">
+            <IssueRow issue={i} onJump={onJump} onTag={onTagUnverified} />
+          </li>
         ))}
         {warnings.map((i, n) => (
-          <li key={`w${n}`} className="warn"><IssueRow issue={i} onJump={onJump} /></li>
+          <li key={`w${n}`} className="warn">
+            <IssueRow issue={i} onJump={onJump} onTag={onTagUnverified} />
+          </li>
         ))}
       </ul>
 

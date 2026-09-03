@@ -195,3 +195,31 @@ export function unlockSection(state: PRDState, id: SectionId): PRDState {
     sections: { ...state.sections, [id]: { ...state.sections[id], locked: false } },
   };
 }
+
+/**
+ * 문제가 된 문장 끝에 `[미검증]`을 붙인다 — 점검 화면의 '한 번에 고치기'.
+ *
+ * 손으로 마크다운을 고치라고 하면 대부분 그냥 건너뛴다(빌더 지적 2026-09-03).
+ * 표시 하나 붙이는 일이라면 앱이 대신 해주는 편이 낫다.
+ *
+ * **섹션을 잠그지 않는다.** 사용자가 내용을 다시 쓴 게 아니라 표시만 붙인 것이므로,
+ * 엔진이 이 섹션을 계속 다듬을 수 있어야 한다.
+ */
+export function tagUnverified(state: PRDState, id: SectionId, sentence: string): PRDState {
+  const target = sentence.trim();
+  const current = state.sections[id];
+  if (target === '' || !current.content.includes(target)) return state;
+  if (/\[미검증\]/.test(target)) return state;
+
+  return {
+    ...state,
+    sections: {
+      ...state.sections,
+      [id]: {
+        ...current,
+        content: current.content.replace(target, `${target} [미검증]`),
+        updatedAtTurn: state.turn,
+      },
+    },
+  };
+}
